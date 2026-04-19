@@ -21,10 +21,12 @@ import {
   Loader2,
   Globe,
   Link as LinkIcon,
-  Wand2
+  Wand2,
+  ShieldAlert
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
-import { db, isFirebaseEnabled } from '../lib/firebase';
+import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { 
   createStore, 
   updateStore, 
@@ -45,6 +47,8 @@ export default function Seller() {
   const [store, setStore] = React.useState<Store | null>(null);
   const [products, setProducts] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [authLoading, setAuthLoading] = React.useState(isFirebaseEnabled);
+  const [isFirebaseAuthed, setIsFirebaseAuthed] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState<'dashboard' | 'products' | 'settings'>('dashboard');
   const [isEditingStore, setIsEditingStore] = React.useState(false);
@@ -55,7 +59,7 @@ export default function Seller() {
   const navigate = useNavigate();
 
   React.useEffect(() => {
-    // Check local session instead of Firebase
+    // Check local session
     const savedSession = localStorage.getItem('user_session');
     if (!savedSession) {
       navigate('/admin');
@@ -69,19 +73,34 @@ export default function Seller() {
       return;
     }
 
-    // Load store and products from local storage
-    const loadData = async () => {
+    // Load store and products
+    const loadData = async (shouldCreateStore = true) => {
+      // Don't attempt cloud operations if not authed yet
+      if (isFirebaseEnabled && !auth?.currentUser) {
+        setLoading(false);
+        return;
+      }
+
       getMyStore(async (s) => {
         if (!s) {
+          if (!shouldCreateStore) {
+            setLoading(false);
+            return;
+          }
           // If no store exists, create a default one automatically
-          await createStore({
-            name: 'ESTEHANGET Official',
-            location: 'Jakarta Selatan',
-            description: 'Toko resmi ESTEHANGET menyuguhkan berbagai produk gadget dan digital terbaik untuk Anda.',
-            logo: CONTACT_INFO.logo
-          });
-          // Reload to get the new store
-          window.location.reload();
+          try {
+            await createStore({
+              name: 'ESTEHANGET Official',
+              location: 'Jakarta Selatan',
+              description: 'Toko resmi ESTEHANGET menyuguhkan berbagai produk gadget dan digital terbaik untuk Anda.',
+              logo: CONTACT_INFO.logo
+            });
+            window.location.reload();
+          } catch (err) {
+            console.error("Auto store creation failed:", err);
+            // Don't reload if it failed (might be auth)
+            setLoading(false);
+          }
           return;
         }
         setStore(s);
@@ -90,17 +109,42 @@ export default function Seller() {
       });
     };
 
-    loadData();
+    // Sync with Firebase Auth
+    let unsubscribe: any;
+    if (isFirebaseEnabled && auth) {
+      unsubscribe = onAuthStateChanged(auth, (u) => {
+        const isAuthed = !!u && u.email === ADMIN_EMAIL;
+        setIsFirebaseAuthed(isAuthed);
+        setAuthLoading(false);
+        
+        // Load data once auth is determined
+        if (isAuthed || !isFirebaseEnabled) {
+          loadData(isAuthed); // Only auto-create if we have cloud auth or are in local mode
+        } else {
+          setLoading(false);
+        }
+      });
+    } else {
+      // Local mode
+      loadData();
+    }
+
+    return () => unsubscribe?.();
   }, [navigate]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tea-main"></div>
-        <p className="text-black/40 dark:text-white/40 font-medium animate-pulse">Memuat data toko...</p>
+        <p className="text-black/40 dark:text-white/40 font-medium animate-pulse">
+          {authLoading ? 'Memverifikasi Hak Akses Cloud...' : 'Memuat data toko...'}
+        </p>
       </div>
     );
   }
+
+  // If Cloud is enabled but not authed, show a warning if trying to perform protected actions
+  const isCloudWarningVisible = isFirebaseEnabled && !isFirebaseAuthed;
 
   if (error) {
     return (
@@ -128,24 +172,68 @@ export default function Seller() {
       <div className="bg-white dark:bg-black border-b border-black/5 dark:border-white/5 sticky top-[88px] z-30">
       <div className="max-w-7xl mx-auto px-4 h-auto min-h-[4rem] py-2 md:h-16 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={store.logo} alt={store.name} className="w-10 h-10 rounded-xl object-cover" />
+            <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden">
+              {store?.logo ? (
+                <img src={store.logo} alt={store.name} className="w-full h-full object-cover" />
+              ) : (
+                <StoreIcon className="text-black/20" size={20} />
+              )}
+            </div>
             <div>
-              <h1 className="font-bold text-black dark:text-white">{store.name}</h1>
+              <h1 className="font-bold text-black dark:text-white">{store?.name || 'Toko Belum Siap'}</h1>
               <p className="text-[10px] text-black/40 dark:text-white/40 uppercase font-bold tracking-widest">
                 Seller Center ({isFirebaseEnabled ? 'Cloud' : 'Lokal'})
               </p>
             </div>
           </div>
-          <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl">
-            <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={16} />} label="Dashboard" />
-            <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<Package size={16} />} label="Produk" />
-            <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={16} />} label="Toko" />
-          </div>
+          {store && (
+            <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl">
+              <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={16} />} label="Dashboard" />
+              <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<Package size={16} />} label="Produk" />
+              <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={16} />} label="Toko" />
+            </div>
+          )}
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <AnimatePresence mode="wait">
+      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {!isFirebaseAuthed && isFirebaseEnabled && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-yellow-500/10 border-2 border-dashed border-yellow-500/20 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-yellow-500/20 rounded-2xl flex items-center justify-center text-yellow-600">
+                <ShieldAlert size={24} />
+              </div>
+              <div>
+                <h3 className="font-bold text-black dark:text-white">Sinkronisasi Cloud Diperlukan</h3>
+                <p className="text-sm text-black/40 dark:text-white/40">Data toko ada di Database Cloud. Silakan login Google untuk melihat dan mengelola produk Anda.</p>
+              </div>
+            </div>
+            <button 
+              onClick={async () => {
+                try {
+                  setAuthLoading(true);
+                  await signInWithPopup(auth!, googleProvider);
+                  // Reload data after auth
+                  window.location.reload();
+                } catch (err) {
+                  alert("Gagal sinkronisasi Cloud. Cek koneksi internet Anda.");
+                } finally {
+                  setAuthLoading(false);
+                }
+              }}
+              className="bg-yellow-500 text-white px-6 py-3 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
+            >
+              <Globe size={18} /> Otorisasi Sekarang
+            </button>
+          </motion.div>
+        )}
+
+        {store ? (
+          <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <motion.div
               key="dashboard"
@@ -257,6 +345,14 @@ export default function Seller() {
             </motion.div>
           )}
         </AnimatePresence>
+        ) : (
+          !authLoading && !isFirebaseAuthed && isFirebaseEnabled && (
+            <div className="text-center py-20 bg-white dark:bg-black rounded-3xl border-2 border-dashed border-black/10 dark:border-white/10">
+              <ShieldAlert size={48} className="mx-auto mb-4 opacity-20" />
+              <p className="text-black/40 dark:text-white/40 font-bold px-6">Gagal memuat data toko. Pastikan Anda sudah memberikan otorisasi Cloud melalui tombol di atas.</p>
+            </div>
+          )
+        )}
       </main>
 
       {/* Modals */}

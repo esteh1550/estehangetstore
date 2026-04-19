@@ -15,8 +15,15 @@ import {
   increment,
   Timestamp
 } from 'firebase/firestore';
-import { db, isFirebaseEnabled, handleFirestoreError, OperationType } from './firebase';
+import { db, isFirebaseEnabled, handleFirestoreError, OperationType, auth } from './firebase';
 import { Store, Product, Review, Order } from '../types';
+
+// Helper to ensure auth is ready or fail fast
+const ensureAuth = () => {
+  if (isFirebaseEnabled && (!auth || !auth.currentUser)) {
+    throw new Error("PERMISSION_DENIED: Silakan login ulang via Dashboard Admin untuk mengaktifkan akses Cloud.");
+  }
+};
 
 export const MAIN_STORE_ID = 'estehanget-store';
 
@@ -40,6 +47,7 @@ export const uploadImage = async (file: File, _path: string): Promise<string> =>
 export const createStore = async (storeData: Omit<Store, 'id' | 'createdAt' | 'rating'>) => {
   if (isFirebaseEnabled && db) {
     try {
+      ensureAuth();
       const storeRef = doc(db, 'stores', MAIN_STORE_ID);
       const newStore = {
         ...storeData,
@@ -65,6 +73,7 @@ export const updateStore = async (storeId: string, storeData: Partial<Store>) =>
   const id = storeId || MAIN_STORE_ID;
   if (isFirebaseEnabled && db) {
     try {
+      ensureAuth();
       const storeRef = doc(db, 'stores', id);
       await updateDoc(storeRef, { ...storeData, updatedAt: serverTimestamp() });
       return;
@@ -100,6 +109,7 @@ export const getMyStore = (callback: (store: Store | null) => void) => {
 export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt'>) => {
   if (isFirebaseEnabled && db) {
     try {
+      ensureAuth();
       const prodRef = collection(db, 'products');
       const docRef = await addDoc(prodRef, {
         ...productData,
@@ -122,6 +132,7 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt'>)
 export const updateProduct = async (productId: string, productData: Partial<Product>) => {
   if (isFirebaseEnabled && db) {
     try {
+      ensureAuth();
       const prodRef = doc(db, 'products', productId);
       await updateDoc(prodRef, { ...productData, updatedAt: serverTimestamp() });
       return;
@@ -139,6 +150,7 @@ export const updateProduct = async (productId: string, productData: Partial<Prod
 export const deleteProduct = async (productId: string) => {
   if (isFirebaseEnabled && db) {
     try {
+      ensureAuth();
       await deleteDoc(doc(db, 'products', productId));
       return;
     } catch (e) {

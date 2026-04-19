@@ -1,23 +1,33 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db, isFirebaseEnabled } from '../lib/firebase';
+import { auth, googleProvider, isFirebaseEnabled } from '../lib/firebase';
+import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getLocalOrders, getLocalNewsletters, OrderRecord, NewsletterRecord, clearLocalData, updateLocalOrderStatus } from '../lib/storage';
 import { formatPrice } from '../lib/utils';
 import { 
   updateOrderStatus
 } from '../lib/sellerService';
 import { CONTACT_INFO, ADMIN_EMAIL } from '../constants';
-import { Loader2, LogOut, ShoppingBag, Mail, CheckCircle, Clock, Trash2, Package } from 'lucide-react';
+import { Loader2, LogOut, ShoppingBag, Mail, CheckCircle, Clock, Trash2, Package, ShieldAlert, Globe } from 'lucide-react';
 
 // Admin dashboard component
 export default function Admin() {
   const [user, setUser] = React.useState<{ email: string; displayName: string } | null>(null);
+  const [firebaseUser, setFirebaseUser] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [orders, setOrders] = React.useState<OrderRecord[]>([]);
   const [newsletters, setNewsletters] = React.useState<NewsletterRecord[]>([]);
   const [activeTab, setActiveTab] = React.useState<'orders' | 'newsletter'>('orders');
 
   React.useEffect(() => {
+    // Sync with Firebase Auth if enabled
+    let unsubscribe: any;
+    if (isFirebaseEnabled && auth) {
+      unsubscribe = onAuthStateChanged(auth, (u) => {
+        setFirebaseUser(u);
+      });
+    }
+
     // Check for local session
     const saved = localStorage.getItem('user_session');
     if (saved) {
@@ -26,18 +36,41 @@ export default function Admin() {
     setOrders(getLocalOrders());
     setNewsletters(getLocalNewsletters());
     setLoading(false);
+
+    return () => unsubscribe?.();
   }, []);
 
-  const handleLogin = () => {
-    const adminSession = {
-      email: ADMIN_EMAIL,
-      displayName: 'Administrator'
-    };
-    setUser(adminSession);
-    localStorage.setItem('user_session', JSON.stringify(adminSession));
+  const handleLogin = async () => {
+    try {
+      if (isFirebaseEnabled && auth) {
+        setLoading(true);
+        const result = await signInWithPopup(auth, googleProvider);
+        if (result.user.email !== ADMIN_EMAIL) {
+          await signOut(auth);
+          alert(`Akses Ditolak: Email ${result.user.email} tidak terdaftar sebagai Admin.`);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const adminSession = {
+        email: ADMIN_EMAIL,
+        displayName: 'Administrator'
+      };
+      setUser(adminSession);
+      localStorage.setItem('user_session', JSON.stringify(adminSession));
+    } catch (err) {
+      console.error("Login failed:", err);
+      alert("Gagal masuk. Pastikan koneksi internet stabil atau coba mode lokal.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (isFirebaseEnabled && auth) {
+      await signOut(auth);
+    }
     setUser(null);
     localStorage.removeItem('user_session');
   };
@@ -82,16 +115,27 @@ export default function Admin() {
             <img src={CONTACT_INFO.logo} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <h1 className="text-3xl font-display font-bold text-black dark:text-white">Admin Access</h1>
-          <p className="text-black/60 dark:text-white/60">
-            Halaman ini menggunakan mode penyimpanan lokal untuk keamanan data Anda.
-          </p>
-          
-          <button 
-            onClick={handleLogin}
-            className="w-full bg-tea-main text-white py-4 rounded-2xl font-bold hover:scale-[1.02] transition-transform flex items-center justify-center gap-3 shadow-lg"
-          >
-            Masuk sebagai Admin
-          </button>
+          <div className="space-y-4">
+            <p className="text-black/60 dark:text-white/60 text-sm">
+              {isFirebaseEnabled 
+                ? "Gunakan akun Google Anda untuk mensinkronkan data toko dengan database cloud (Vercel Ready)."
+                : "Halaman ini menggunakan mode penyimpanan lokal. Data hanya akan tersimpan di browser ini."}
+            </p>
+            
+            <button 
+              onClick={handleLogin}
+              className="w-full bg-tea-main text-white py-4 rounded-2xl font-bold hover:scale-[1.02] transition-transform flex items-center justify-center gap-3 shadow-lg"
+            >
+              {isFirebaseEnabled && <Globe size={18} />}
+              {isFirebaseEnabled ? 'Masuk & Sinkron Cloud' : 'Masuk sebagai Admin'}
+            </button>
+
+            {isFirebaseEnabled && (
+              <p className="text-[10px] uppercase font-bold tracking-widest text-black/20 dark:text-white/20">
+                Authorized Email: {ADMIN_EMAIL}
+              </p>
+            )}
+          </div>
         </motion.div>
       </div>
     );
