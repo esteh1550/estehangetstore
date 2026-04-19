@@ -16,6 +16,14 @@ const firebaseConfig = {
 
 const isConfigValid = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
 
+if (!isConfigValid && import.meta.env.PROD) {
+  console.warn("Firebase configuration is invalid or missing required keys. Falling back to local mode.");
+  console.debug("Current Firebase Config (Redacted for Security):", {
+    apiKey: firebaseConfig.apiKey ? "Present" : "Missing",
+    projectId: firebaseConfig.projectId ? "Present" : "Missing"
+  });
+}
+
 let app;
 if (isConfigValid) {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();

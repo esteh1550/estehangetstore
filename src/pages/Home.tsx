@@ -9,7 +9,6 @@ import { cn, formatPrice } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import { getAllProducts } from '../lib/sellerService';
 import { useProductHistory } from '../lib/useProductHistory';
-import { isFirebaseEnabled } from '../lib/firebase';
 
 interface HomeProps {
   onAddToCart: (p: Product) => void;
@@ -137,22 +136,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
   }, [getRecommendedProducts, allProducts]);
 
   return (
-    <div className="space-y-12 pb-20 pt-20">
-      {/* Connection Mode Indicator */}
-      <div className="max-w-7xl mx-auto px-4 -mb-8">
-        {isFirebaseEnabled ? (
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Database: Cloud (Vercel Ready)</span>
-          </div>
-        ) : (
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-full">
-            <div className="w-2 h-2 bg-yellow-500 rounded-full" />
-            <span className="text-[10px] font-bold text-yellow-600 uppercase tracking-widest">Database: Lokal (Hanya di Browser Ini)</span>
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-12 pb-20">
       {!isShop && <Hero />}
 
       {isShop && (
