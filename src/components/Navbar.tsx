@@ -80,7 +80,7 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-hidden">
         <Link to="/" className="flex items-center gap-2 flex-shrink-0">
           <img src={CONTACT_INFO.logo} alt="Logo" className="h-8 w-8 sm:h-10 sm:w-10 object-cover rounded-lg" referrerPolicy="no-referrer" />
-          <span className="font-display text-lg sm:text-xl font-bold tracking-tighter text-black dark:text-white text-outline truncate max-w-[100px] sm:max-w-none">ESTEHANGET</span>
+          <span className="font-display text-lg sm:text-xl font-bold tracking-tighter text-black dark:text-white text-outline truncate max-w-[200px] sm:max-w-none">ESTEHANGET</span>
         </Link>
 
         {/* Desktop Menu */}
@@ -104,19 +104,19 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
           </div>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex items-center gap-1 md:gap-4">
           <button 
             onClick={onToggleDarkMode}
-            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-black dark:text-white"
+            className="hidden md:flex p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-black dark:text-white"
           >
             {isDarkMode ? <Sun size={20} className="icon-outline" /> : <Moon size={20} className="icon-outline" />}
           </button>
-          <button className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-black dark:text-white">
+          <button className="hidden md:flex p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-black dark:text-white">
             <Search size={20} className="icon-outline" />
           </button>
           <button 
             onClick={onOpenWishlist}
-            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors relative text-black dark:text-white"
+            className="hidden md:flex p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors relative text-black dark:text-white"
           >
             <Heart size={20} className="icon-outline" />
             {wishlistCount > 0 && (
@@ -176,9 +176,49 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
             exit={{ opacity: 0, y: -20 }}
             className="absolute top-full left-0 right-0 bg-bg-light dark:bg-[#1a1a1a] border-t border-black/10 dark:border-white/10 p-4 flex flex-col gap-4 md:hidden shadow-lg"
           >
-            <Link to="/shop" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-black dark:text-white">Shop</Link>
-            <Link to="/about" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-black dark:text-white">About</Link>
-            <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-black dark:text-white">Contact</Link>
+            <div className="flex items-center justify-around py-4 border-b border-black/5 dark:border-white/5">
+              <button 
+                onClick={onToggleDarkMode}
+                className="flex flex-col items-center gap-1 text-black dark:text-white"
+              >
+                <div className="p-3 bg-black/5 dark:bg-white/10 rounded-2xl">
+                  {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                </div>
+                <span className="text-[10px] font-bold uppercase">{isDarkMode ? 'Light' : 'Dark'}</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  // Trigger search focus or navigate to search
+                }}
+                className="flex flex-col items-center gap-1 text-black dark:text-white"
+              >
+                <div className="p-3 bg-black/5 dark:bg-white/10 rounded-2xl">
+                  <Search size={20} />
+                </div>
+                <span className="text-[10px] font-bold uppercase">Cari</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onOpenWishlist();
+                }}
+                className="flex flex-col items-center gap-1 text-black dark:text-white relative"
+              >
+                <div className="p-3 bg-black/5 dark:bg-white/10 rounded-2xl">
+                  <Heart size={20} />
+                  {wishlistCount > 0 && (
+                    <span className="absolute top-2 right-2 bg-black dark:bg-white text-white dark:text-black text-[8px] w-4 h-4 flex items-center justify-center rounded-full font-bold">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] font-bold uppercase">Wishlist</span>
+              </button>
+            </div>
+            <Link to="/shop" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-black dark:text-white text-outline p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl">Shop</Link>
+            <Link to="/about" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-black dark:text-white text-outline p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl">About</Link>
+            <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-black dark:text-white text-outline p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl">Contact</Link>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Store as StoreIcon, 
@@ -22,7 +23,8 @@ import {
   Globe,
   Link as LinkIcon,
   Wand2,
-  ShieldAlert
+  ShieldAlert,
+  Share2
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
@@ -55,6 +57,7 @@ export default function Seller() {
   const [isAddingProduct, setIsAddingProduct] = React.useState(false);
   const [isImportingLink, setIsImportingLink] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
+  const [successProductId, setSuccessProductId] = React.useState<string | null>(null);
   
   const navigate = useNavigate();
 
@@ -399,12 +402,66 @@ export default function Seller() {
                 <ProductForm 
                   storeId={store.id} 
                   initialData={editingProduct || undefined} 
-                  onComplete={() => { 
+                  onComplete={(id) => { 
                     setIsAddingProduct(false); 
                     setEditingProduct(null); 
                     getMyProducts(setProducts); 
+                    if (id && !editingProduct) {
+                      setSuccessProductId(id);
+                    }
                   }} 
                 />
+              </div>
+            </motion.div>
+          </div>
+        )}
+        {/* Success Modal */}
+        {successProductId && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+              onClick={() => setSuccessProductId(null)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl overflow-hidden p-8 text-center space-y-6"
+            >
+              <div className="w-20 h-20 bg-tea-main/10 rounded-full flex items-center justify-center mx-auto text-tea-main">
+                <Package size={40} />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold text-black dark:text-white">Produk Terbit!</h2>
+                <p className="text-sm text-black/60 dark:text-white/60">Produk Anda sudah aktif dan bisa dilihat oleh pelanggan di Marketplace.</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                <Link 
+                  to={`/product/${successProductId}`}
+                  onClick={() => setSuccessProductId(null)}
+                  className="bg-tea-main text-white py-4 rounded-2xl font-bold shadow-lg hover:scale-[1.02] transition-all text-sm"
+                >
+                  Lihat Halaman Produk
+                </Link>
+                <button 
+                  onClick={() => {
+                    const url = `${window.location.origin}/product/${successProductId}`;
+                    navigator.clipboard.writeText(url);
+                    alert('Link produk disalin!');
+                  }}
+                  className="bg-black/5 dark:bg-white/5 text-black dark:text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-sm hover:bg-black/10 dark:hover:bg-white/10"
+                >
+                  <Share2 size={16} /> Salin Link Produk
+                </button>
+                <button 
+                  onClick={() => setSuccessProductId(null)}
+                  className="text-black/40 dark:text-white/40 font-bold py-2 text-sm hover:text-black dark:hover:text-white transition-colors"
+                >
+                  Tutup
+                </button>
               </div>
             </motion.div>
           </div>
@@ -446,11 +503,33 @@ function StatCard({ title, value, icon }: { title: string, value: string | numbe
 }
 
 function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: () => void, onDelete: () => void }) {
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = `${window.location.origin}/product/${product.id}`;
+    if (navigator.share) {
+      navigator.share({
+        title: product.name,
+        text: `Cek ${product.name} di ESTEHANGET!`,
+        url: url
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(url);
+      alert('Link produk berhasil disalin!');
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-black rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden group shadow-sm">
       <div className="aspect-video relative overflow-hidden">
         <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
         <div className="absolute top-4 right-4 flex gap-2">
+          <button 
+            title="Bagikan Link Produk"
+            onClick={handleShare} 
+            className="p-2 bg-white/90 dark:bg-black/90 text-sky-blue rounded-xl shadow-lg hover:scale-110 transition-all"
+          >
+            <Share2 size={16} />
+          </button>
           <button onClick={onEdit} className="p-2 bg-white/90 dark:bg-black/90 text-tea-main rounded-xl shadow-lg hover:scale-110 transition-all">
             <Edit2 size={16} />
           </button>
@@ -460,7 +539,9 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
         </div>
       </div>
       <div className="p-4 space-y-2">
-        <h4 className="font-bold text-black dark:text-white truncate">{product.name}</h4>
+        <Link to={`/product/${product.id}`}>
+          <h4 className="font-bold text-black dark:text-white truncate hover:text-tea-main transition-colors">{product.name}</h4>
+        </Link>
         <p className="text-tea-main font-bold">{formatPrice(product.price)}</p>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg text-black/40 dark:text-white/40">
@@ -584,13 +665,15 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
   );
 }
 
-function ProductForm({ storeId, initialData, onComplete }: { storeId: string, initialData?: Product, onComplete: () => void }) {
+function ProductForm({ storeId, initialData, onComplete }: { storeId: string, initialData?: Product, onComplete: (id?: string) => void }) {
   const [formData, setFormData] = React.useState({
     name: initialData?.name || '',
     price: initialData?.price || 0,
     category: initialData?.category || 'gadget',
     description: initialData?.description || '',
-    specifications: initialData?.specifications || '',
+    specifications: Array.isArray(initialData?.specifications) 
+      ? initialData.specifications.join('\n') 
+      : (typeof initialData?.specifications === 'string' ? initialData.specifications : ''),
     images: initialData?.images || []
   });
   const [loading, setLoading] = React.useState(false);
@@ -610,19 +693,24 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         finalImages = [`https://picsum.photos/seed/${formData.name}/800/600`];
       }
 
+      const specs = typeof formData.specifications === 'string' 
+        ? formData.specifications.split('\n').filter(s => s.trim()) 
+        : (Array.isArray(formData.specifications) ? formData.specifications : []);
+
       const productData = {
         ...formData,
         storeId,
         images: finalImages,
-        specifications: formData.specifications
+        specifications: specs
       };
 
+      let newId = '';
       if (initialData?.id) {
         await updateProduct(initialData.id, productData);
       } else {
-        await addProduct(productData as any);
+        newId = await addProduct(productData as any);
       }
-      onComplete();
+      onComplete(newId);
     } catch (error) {
       alert('Gagal menyimpan produk');
     } finally {

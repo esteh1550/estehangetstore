@@ -1,59 +1,101 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default Deny
+    // 0. Global Safety Net
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Helper functions
+    // --- Helper Primitives ---
+    
     function isSignedIn() {
       return request.auth != null;
     }
     
+    function emailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isAdmin() {
-      return isSignedIn() && 
-             request.auth.token.email == 'eepsyarief20@gmail.com' && 
-             request.auth.token.email_verified == true;
+      return emailVerified() && request.auth.token.email == 'eepsyarief20@gmail.com';
     }
 
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // Stores
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidStore(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.location is string && data.location.size() <= 200 &&
+             data.description is string && data.description.size() <= 1000;
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.price is number && data.price >= 0 &&
+             data.category is string && data.category in ['gadget', 'pakaian', 'sepatu', 'digital'] &&
+             data.images is list && data.images.size() <= 10;
+    }
+
+    function isValidReview(data) {
+      return data.productId is string && data.productId.size() > 0 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 1000 &&
+             data.userId == request.auth.uid;
+    }
+
+    // --- Rules ---
+
+    // 1. Stores
     match /stores/{storeId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAdmin() && isValidStore(incoming()) && 
+                        incoming().keys().hasAll(['name', 'location', 'description']) && (incoming().keys().size() >= 3);
+      allow update: if isAdmin() && isValidStore(incoming()) &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'location', 'description', 'logo', 'updatedAt']);
     }
 
-    // Products
+    // 2. Products
     match /products/{productId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin() && isValidProduct(incoming()) &&
+                        incoming().keys().hasAll(['storeId', 'name', 'price', 'category']) && (incoming().keys().size() >= 4);
+      allow update: if isAdmin() && isValidProduct(incoming()) &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'price', 'category', 'description', 'specifications', 'images', 'views', 'updatedAt']);
+      allow delete: if isAdmin();
     }
 
-    // Reviews
+    // 3. Reviews
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
+      allow create: if emailVerified() && isValidReview(incoming());
+      allow delete: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
     }
 
-    // Seller Orders
+    // 4. Seller Orders
     match /orders/{orderId} {
       allow read, write: if isAdmin();
     }
 
-    // Customer Orders
+    // 5. Customer Orders
     match /customer_orders/{orderId} {
-      allow create: if true; // Allow guest orders for now as requested by "minimalist" feel
-      allow read, update: if isAdmin();
+      allow create: if true; // Guest checkout allowed
+      allow read, write: if isAdmin();
     }
 
-    // Newsletter
+    // 6. Newsletter
     match /newsletter/{entryId} {
-      allow create: if true;
+      allow create: if incoming().email is string && incoming().email.size() > 3;
       allow read: if isAdmin();
     }
   }

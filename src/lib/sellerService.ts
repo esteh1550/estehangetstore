@@ -35,12 +35,44 @@ const setLocalData = <T>(key: string, data: T[]) => localStorage.setItem(STORAGE
 // --- Firestore Services ---
 
 export const uploadImage = async (file: File, _path: string): Promise<string> => {
-  // Simple Base64 simulation for both modes for now to ensure portability
-  // In a full production app, we would use Firebase Storage here
-  return new Promise((resolve) => {
+  // Client-side compression to keep Base64 strings small enough for Firestore's 1MB limit
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
     reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1000; // Limit dimensions
+        const MAX_HEIGHT = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        // Convert to JPEG with medium compression
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error("Failed to load image for compression"));
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
   });
 };
 
@@ -166,9 +198,16 @@ export const deleteProduct = async (productId: string) => {
 
 export const getMyProducts = (callback: (products: Product[]) => void) => {
   if (isFirebaseEnabled && db) {
-    const q = query(collection(db, 'products'), where('storeId', '==', MAIN_STORE_ID), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'products'), where('storeId', '==', MAIN_STORE_ID));
     return onSnapshot(q, (snap) => {
-      callback(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      // Sort client-side to avoid mandatory composite index requirement
+      prods.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt as any);
+        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt as any);
+        return dateB.getTime() - dateA.getTime();
+      });
+      callback(prods);
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'products'));
   }
 
@@ -258,9 +297,16 @@ export const getProductsByStore = async (storeId: string): Promise<Product[]> =>
 
 export const getReviewsByProduct = (productId: string, callback: (reviews: Review[]) => void) => {
   if (isFirebaseEnabled && db) {
-    const q = query(collection(db, 'reviews'), where('productId', '==', productId), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'reviews'), where('productId', '==', productId));
     return onSnapshot(q, (snap) => {
-      callback(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
+      const revs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+      // Sort client-side to avoid mandatory composite index requirement
+      revs.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt as any);
+        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt as any);
+        return dateB.getTime() - dateA.getTime();
+      });
+      callback(revs);
     }, (err) => handleFirestoreError(err, OperationType.LIST, `products/${productId}/reviews`));
   }
   callback(getLocalData<Review>('reviews').filter(r => r.productId === productId));
@@ -346,9 +392,16 @@ export const updateOrderStatus = async (orderId: string, status: Order['status']
 
 export const getMyOrders = (userId: string, callback: (orders: Order[]) => void) => {
   if (isFirebaseEnabled && db) {
-    const q = query(collection(db, 'orders'), where('userId', '==', userId), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'orders'), where('userId', '==', userId));
     return onSnapshot(q, (snap) => {
-      callback(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)));
+      const results = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      // Sort client-side to avoid mandatory composite index requirement
+      results.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt as any);
+        const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt as any);
+        return dateB.getTime() - dateA.getTime();
+      });
+      callback(results);
     }, (err) => handleFirestoreError(err, OperationType.LIST, `users/${userId}/orders`));
   }
   callback(getLocalData<Order>('orders').filter(o => o.userId === userId));

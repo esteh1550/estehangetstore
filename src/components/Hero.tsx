@@ -71,6 +71,9 @@ export default function Hero() {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.4 }}
+                  onClick={() => {
+                    document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
                   className="bg-tea-main text-white px-6 py-3 rounded-xl font-bold text-sm md:text-base hover:scale-105 transition-transform shadow-lg"
                 >
                   Cek Sekarang

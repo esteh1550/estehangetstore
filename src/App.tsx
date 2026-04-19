@@ -7,7 +7,6 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import Navbar from './components/Navbar';
-import BottomNav from './components/BottomNav';
 import Footer from './components/Footer';
 import CartSidebar from './components/CartSidebar';
 import Chatbot from './components/Chatbot';
@@ -154,7 +153,6 @@ export default function App() {
         />
 
         <Chatbot />
-        <BottomNav />
       </div>
     </Router>
   );

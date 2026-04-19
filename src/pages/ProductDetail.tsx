@@ -259,7 +259,10 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
               <div className="space-y-4">
                 <h4 className="font-bold text-sm uppercase tracking-widest text-black/40 dark:text-white/40 text-outline">Spesifikasi</h4>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {product.specifications.map((spec, i) => (
+                  {(Array.isArray(product.specifications) 
+                    ? product.specifications 
+                    : (typeof product.specifications === 'string' ? (product.specifications as string).split('\n').filter(s => s.trim()) : [])
+                  ).map((spec, i) => (
                     <li key={i} className="flex items-center gap-3 text-black/80 dark:text-white/80 text-outline">
                       <CheckCircle2 size={20} className="text-tea-main" />
                       {spec}

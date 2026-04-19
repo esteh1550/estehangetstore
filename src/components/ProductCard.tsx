@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, ShoppingCart, Eye, Star, MapPin } from 'lucide-react';
+import { Heart, ShoppingCart, Eye, Star, MapPin, Share2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
@@ -58,10 +58,27 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
         
         <div className="absolute top-3 right-3 flex flex-col gap-2 translate-x-12 group-hover:translate-x-0 transition-transform duration-300">
           <button
-            onClick={() => onToggleWishlist(product.id)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleWishlist(product.id);
+            }}
             className={`p-2 rounded-full shadow-md transition-colors ${isWishlisted ? 'bg-red-500 text-white' : 'bg-white dark:bg-black text-black dark:text-white hover:bg-red-50 dark:hover:bg-red-900/20'}`}
           >
             <Heart size={16} fill={isWishlisted ? 'currentColor' : 'none'} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const url = `${window.location.origin}/product/${product.id}`;
+              navigator.clipboard.writeText(url);
+              alert('Link produk disalin!');
+            }}
+            className="p-2 bg-white dark:bg-black text-black dark:text-white rounded-full shadow-md hover:bg-sky-blue hover:text-black transition-all"
+            title="Bagikan"
+          >
+            <Share2 size={16} />
           </button>
         </div>
       </div>

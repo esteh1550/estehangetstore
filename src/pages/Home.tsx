@@ -156,7 +156,10 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
             {categoriesData.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setCategory(cat.id)}
+                onClick={() => {
+                  setCategory(cat.id);
+                  document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className="flex flex-col items-center gap-3 group"
               >
                 <div className={cn(
@@ -178,30 +181,50 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
           <div className="bg-white dark:bg-black rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-sky-blue">
-                  <Zap size={24} fill="currentColor" />
+                <div className="flex items-center gap-2 text-red-600">
+                  <Zap size={24} fill="currentColor" className="animate-pulse" />
                   <h2 className="text-2xl font-display font-bold italic uppercase tracking-tighter">Flash Sale</h2>
                 </div>
                 <FlashSaleTimer />
               </div>
-              <button className="text-sky-blue font-bold text-sm hover:underline">Lihat Semua &gt;</button>
+              <button 
+                onClick={() => {
+                  setCategory('all');
+                  document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="text-red-600 font-bold text-sm hover:underline"
+              >
+                Lihat Semua &gt;
+              </button>
             </div>
             <div className="p-6 overflow-x-auto no-scrollbar">
               <div className="flex gap-4 min-w-max">
-                {allProducts.slice(0, 6).map((product) => (
-                  <div key={product.id} className="w-40 space-y-2 group cursor-pointer">
-                    <div className="relative aspect-square rounded-xl overflow-hidden bg-bg-light dark:bg-white/5">
+                 {allProducts.slice(0, 6).map((product) => (
+                  <div 
+                    key={product.id} 
+                    onClick={() => onViewDetails(product)}
+                    className="w-40 space-y-2 group cursor-pointer"
+                  >
+                    <div className="relative aspect-square rounded-xl overflow-hidden bg-bg-light dark:bg-white/5 animate-shimmer">
                       <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
-                      <div className="absolute top-0 left-0 bg-sky-blue text-black text-[10px] font-bold px-2 py-1 rounded-br-lg">
+                      <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-10 animate-pulse">
                         -30%
+                      </div>
+                      <div className="absolute bottom-2 left-2 right-2 bg-red-600/90 backdrop-blur-sm text-white text-[8px] font-bold py-1 px-2 rounded-lg text-center uppercase tracking-tighter z-10">
+                        Flash Sale
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-sky-blue font-bold text-sm">{formatPrice(product.price * 0.7)}</p>
-                      <div className="w-full h-2 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-sky-blue w-3/4" />
+                      <div className="flex flex-col">
+                        <p className="text-red-600 font-bold text-sm">{formatPrice(product.price)}</p>
+                        <p className="text-[10px] text-black/40 dark:text-white/40 line-through">{formatPrice(product.price / 0.7)}</p>
                       </div>
-                      <p className="text-[10px] font-bold text-black dark:text-white uppercase">75% Terjual</p>
+                      <div className="space-y-1 pt-1">
+                        <div className="w-full h-2 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
+                          <div className="h-full bg-red-600 w-3/4" />
+                        </div>
+                        <p className="text-[8px] md:text-[10px] font-bold text-black dark:text-white uppercase">75% Terjual</p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -258,7 +281,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
       )}
 
       {/* Product Section */}
-      <section className="max-w-7xl mx-auto px-4 space-y-8">
+      <section id="produk-list" className="max-w-7xl mx-auto px-4 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-white dark:bg-black p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm">
           <div className="space-y-2">
             <h2 className="text-2xl font-display font-bold tracking-tighter text-black dark:text-white uppercase italic">Rekomendasi</h2>
