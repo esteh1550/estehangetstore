@@ -135,9 +135,13 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     return getRecommendedProducts(allProducts);
   }, [getRecommendedProducts, allProducts]);
 
+  const featuredProducts = React.useMemo(() => {
+    return allProducts.slice(0, 3);
+  }, [allProducts]);
+
   return (
     <div className="space-y-12 pb-20">
-      {!isShop && <Hero />}
+      {!isShop && <Hero featuredProducts={featuredProducts} />}
 
       {isShop && (
         <section className="max-w-7xl mx-auto px-4 pt-8">
