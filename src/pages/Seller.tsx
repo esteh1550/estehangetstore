@@ -654,8 +654,11 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
     setError(null);
 
     try {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY_MISSING");
+      }
       // Use process.env.GEMINI_API_KEY which is injected by AI Studio Build
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `Extract product information from this marketplace URL: ${url}. 
       Use Google Search to resolve the link and find the actual product title, price, and description.
       Return the data in the specified JSON format.`;
@@ -687,7 +690,12 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
       onClose();
     } catch (err: any) {
       console.error("Import failed:", err);
-      setError("Gagal mengambil data dari link. Pastikan API AI Anda sudah dikonfigurasi.");
+      const msg = err.message || "Unknown error";
+      if (msg === "GEMINI_API_KEY_MISSING") {
+        setError("API Key AI tidak ditemukan. Masukkan 'GEMINI_API_KEY' di menu Settings > Secrets aplikasi ini.");
+      } else {
+        setError(`Error: ${msg.substring(0, 100)}... Pastikan kuncinya benar dan coba lagi.`);
+      }
     } finally {
       setLoading(false);
     }
