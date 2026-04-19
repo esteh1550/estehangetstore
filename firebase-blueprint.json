@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "Seller store profile information.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "description": { "type": "string" },
+        "logo": { "type": "string" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "location", "description"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Individual product in the catalog.",
+      "type": "object",
+      "properties": {
+        "storeId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "specifications": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "views": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["storeId", "name", "price", "category"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer feedback on a product.",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["productId", "rating", "comment"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Product order record.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "address": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerName", "address", "total", "status"]
+    }
+  },
+  "firestore": {
+    "/stores/{storeId}": {
+      "schema": "Store",
+      "description": "Store profiles."
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Product catalog."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Product reviews."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Seller orders."
+    },
+    "/customer_orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer purchase records."
+    },
+    "/newsletter/{entryId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "description": "Newsletter subscriptions."
+    }
+  }
+}
