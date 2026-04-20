@@ -844,16 +844,12 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
       }
       const ai = new GoogleGenAI({ apiKey });
       const prompt = `Extract product information from this marketplace URL: ${url}. 
-      
-      IMPORTANT: If the direct link is blocked by bot protection, login walls, or captcha (common with Tokopedia/Shopee links), 
-      please use Google Search to find the product details from snippets, cached versions, or alternative listings.
-      Try to identify the product name from the URL or initial search and find the price, description, and specifications.
-
-      The output MUST be in the specified JSON format.`;
+      Use Google Search to resolve the link and find the actual product title, price, and description.
+      Return the data in the specified JSON format.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
           responseMimeType: "application/json",
@@ -881,10 +877,8 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
       const msg = err.message || "Unknown error";
       if (msg === "GEMINI_API_KEY_MISSING") {
         setError("API Key AI tidak ditemukan. Tambahkan 'VITE_GEMINI_API_KEY' di Environment Variables Vercel Anda.");
-      } else if (msg.toLowerCase().includes("safety") || msg.toLowerCase().includes("blocked")) {
-        setError("AI terblokir sistem keamanan Marketplace. Coba gunakan Link Full Desktop atau cari nama produknya saja.");
       } else {
-        setError("AI kesulitan membaca link ini (Captcha). Gunakan Link Full Desktop atau masukkan Nama Produk saja di kolom link.");
+        setError(`Error: ${msg.substring(0, 100)}... Pastikan kuncinya benar dan coba lagi.`);
       }
     } finally {
       setLoading(false);
@@ -913,13 +907,7 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
             <Sparkles size={32} className="text-tea-main" />
           </div>
           <h3 className="text-xl font-bold text-black dark:text-white">AI Product Importer</h3>
-          <p className="text-sm text-black/60 dark:text-white/60">Tempel link produk (Tokopedia/Shopee/dll) dan biarkan AI mengisi datanya otomatis.</p>
-          <div className="bg-yellow-500/10 p-3 rounded-2xl border border-yellow-500/20">
-            <p className="text-[10px] text-yellow-600 font-bold leading-tight uppercase tracking-wider mb-1">💡 Tips Anti-Captcha</p>
-            <p className="text-[10px] text-black/60 dark:text-white/60 leading-relaxed">
-              Jika link pendek (<span className="font-mono">vt.tokopedia</span> / <span className="font-mono">shope.ee</span>) gagal karena captcha, gunakan <b>Link Full Desktop</b> atau cari nama produknya saja.
-            </p>
-          </div>
+          <p className="text-sm text-black/60 dark:text-white/60">Tempel link produk (Topedia/Shopee/dll) dan biarkan AI mengisi datanya otomatis.</p>
         </div>
 
         <div className="space-y-4">
