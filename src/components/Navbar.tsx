@@ -63,7 +63,7 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
 
   return (
     <>
-      <div className="fixed top-0 left-0 right-0 z-[60] bg-black dark:bg-white text-white dark:text-black py-1 overflow-hidden">
+      <div className="fixed top-0 left-0 right-0 z-[60] bg-sky-blue text-black py-1 overflow-hidden">
         <div className="flex whitespace-nowrap animate-ticker">
           <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">✨ PROMO RAMADAN: DISKON HINGGA 50% UNTUK SEMUA PRODUK DIGITAL ✨</span>
           <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">💎 PRODUK TERBARU: SMARTWATCH SERIES S SUDAH TERSEDIA 💎</span>
@@ -74,7 +74,7 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
       <nav className={cn(
         "fixed top-6 left-0 right-0 z-50 transition-all duration-300 px-2 sm:px-4 py-3",
         isScrolled 
-          ? "bg-bg-light/80 dark:bg-black/80 backdrop-blur-md shadow-sm" 
+          ? "bg-white/80 backdrop-blur-md shadow-sm" 
           : "bg-transparent"
       )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-hidden">

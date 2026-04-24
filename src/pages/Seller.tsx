@@ -877,6 +877,8 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
       const msg = err.message || "Unknown error";
       if (msg === "GEMINI_API_KEY_MISSING") {
         setError("API Key AI tidak ditemukan. Tambahkan 'VITE_GEMINI_API_KEY' di Environment Variables Vercel Anda.");
+      } else if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
+        setError("Batas pemakaian AI (Quota) telah habis untuk saat ini. Silakan coba lagi beberapa saat lagi atau gunakan kunci API yang berbeda.");
       } else {
         setError(`Error: ${msg.substring(0, 100)}... Pastikan kuncinya benar dan coba lagi.`);
       }

@@ -35,11 +35,11 @@ function FlashSaleTimer() {
 
   return (
     <div className="flex items-center gap-1">
-      <span className="bg-black text-white px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.h.toString().padStart(2, '0')}</span>
-      <span className="text-black dark:text-white font-bold">:</span>
-      <span className="bg-black text-white px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.m.toString().padStart(2, '0')}</span>
-      <span className="text-black dark:text-white font-bold">:</span>
-      <span className="bg-black text-white px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.s.toString().padStart(2, '0')}</span>
+      <span className="bg-sky-blue text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.h.toString().padStart(2, '0')}</span>
+      <span className="text-black font-bold">:</span>
+      <span className="bg-sky-blue text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.m.toString().padStart(2, '0')}</span>
+      <span className="text-black font-bold">:</span>
+      <span className="bg-sky-blue text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.s.toString().padStart(2, '0')}</span>
     </div>
   );
 }
@@ -73,11 +73,11 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
   const categories = ['all', 'gadget', 'pakaian', 'sepatu', 'digital'];
 
   const categoriesData = [
-    { id: 'gadget', name: 'Gadget', icon: <Smartphone size={24} />, color: 'bg-sky-blue/10 text-sky-blue' },
-    { id: 'pakaian', name: 'Pakaian', icon: <Shirt size={24} />, color: 'bg-pastel-pink/10 text-pastel-pink' },
-    { id: 'sepatu', name: 'Sepatu', icon: <Footprints size={24} />, color: 'bg-lavender/10 text-lavender' },
-    { id: 'digital', name: 'Digital', icon: <Laptop size={24} />, color: 'bg-pastel-peach/10 text-pastel-peach' },
-    { id: 'gift', name: 'Hadiah', icon: <Gift size={24} />, color: 'bg-green-500/10 text-green-500' },
+    { id: 'gadget', name: 'Gadget', icon: <Smartphone size={24} />, color: 'bg-sky-blue/10 text-black' },
+    { id: 'pakaian', name: 'Pakaian', icon: <Shirt size={24} />, color: 'bg-sky-blue/5 text-black' },
+    { id: 'sepatu', name: 'Sepatu', icon: <Footprints size={24} />, color: 'bg-sky-blue/10 text-black' },
+    { id: 'digital', name: 'Digital', icon: <Laptop size={24} />, color: 'bg-sky-blue/5 text-black' },
+    { id: 'gift', name: 'Hadiah', icon: <Gift size={24} />, color: 'bg-sky-blue/10 text-black' },
   ];
 
   const suggestions = React.useMemo(() => {
@@ -378,7 +378,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                 className={cn(
                   "px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap",
                   category === 'all' 
-                    ? "bg-tea-main text-white shadow-lg shadow-tea-main/20" 
+                    ? "bg-sky-blue text-black shadow-lg shadow-sky-blue/20" 
                     : "bg-white dark:bg-white/5 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
                 )}
               >
@@ -391,7 +391,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                   className={cn(
                     "px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap",
                     category === cat.id 
-                      ? "bg-tea-main text-white shadow-lg shadow-tea-main/20" 
+                      ? "bg-sky-blue text-black shadow-lg shadow-sky-blue/20" 
                       : "bg-white dark:bg-white/5 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
                   )}
                 >

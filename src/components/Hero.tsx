@@ -22,14 +22,14 @@ const DEFAULT_BANNERS = [
     title: "Gadget Terbaru",
     subtitle: "Cicilan 0% s/d 12 Bulan",
     image: "https://picsum.photos/seed/gadget/1200/800",
-    color: "bg-pastel-peach/20"
+    color: "bg-sky-blue/10"
   },
   {
     id: 3,
     title: "Fashion Minimalis",
     subtitle: "Gratis Ongkir Seluruh Indonesia",
     image: "https://picsum.photos/seed/fashion/1200/800",
-    color: "bg-lavender/20"
+    color: "bg-white"
   }
 ];
 
@@ -43,7 +43,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
         title: p.name,
         subtitle: p.description,
         image: p.images[0],
-        color: i === 0 ? "bg-sky-blue/20" : i === 1 ? "bg-pastel-peach/20" : "bg-lavender/20",
+        color: i === 0 ? "bg-sky-blue/20" : i === 1 ? "bg-sky-blue/10" : "bg-white",
         isProduct: true
       }));
     }
@@ -60,7 +60,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
 
   return (
     <section className="relative pt-28 pb-8 px-4 max-w-7xl mx-auto overflow-hidden">
-      <div className="relative aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden shadow-xl group">
+      <div className="relative aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden shadow-xl group border border-sky-blue/10">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -95,7 +95,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
                   onClick={() => {
                     document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="bg-tea-main text-white px-6 py-3 rounded-xl font-bold text-sm md:text-base hover:scale-105 transition-transform shadow-lg"
+                  className="bg-sky-blue text-black px-6 py-3 rounded-xl font-bold text-sm md:text-base hover:scale-105 transition-transform shadow-lg border border-black/10"
                 >
                   Cek Sekarang
                 </motion.button>

@@ -37,8 +37,12 @@ export async function chatWithESA(messages: Message[]) {
     });
 
     return response.text || "Maaf Kak, ESA sedang istirahat sebentar. Bisa tanya lagi nanti?";
-  } catch (error) {
+  } catch (error: any) {
     console.error("ESA Error:", error);
+    const msg = error.message || "";
+    if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
+      return "Maaf Kak, ESA sedang sangat sibuk (kuota limit). Coba lagi beberapa saat lagi ya!";
+    }
     return "Aduh Kak, ada kendala teknis nih. ESA coba perbaiki dulu ya!";
   }
 }

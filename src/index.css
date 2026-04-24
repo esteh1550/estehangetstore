@@ -5,33 +5,33 @@
   --font-display: "Outfit", sans-serif;
   --font-sans: "Inter", sans-serif;
 
-  --color-tea-main: #8B4513;
-  --color-tea-light: #F4A460;
-  --color-tea-accent: #FF8C00;
-  --color-bg-light: #FCFAF7;
-  --color-text-main: #1A1A1A;
+  --color-tea-main: #0EA5E9;
+  --color-tea-light: #7DD3FC;
+  --color-tea-accent: #38BDF8;
+  --color-bg-light: #FFFFFF;
+  --color-text-main: #000000;
   
-  --color-mint: #C9E4DE;
-  --color-lavender: #DBCDF0;
-  --color-bone: #FAEDCB;
-  --color-sky-blue: #A0D2EB;
-  --color-pastel-blue: #C6DEF1;
-  --color-pastel-pink: #F2C6DE;
-  --color-pastel-peach: #F7D9C4;
+  --color-mint: #E0F2FE;
+  --color-lavender: #F0F9FF;
+  --color-bone: #F8FAFC;
+  --color-sky-blue: #0EA5E9;
+  --color-pastel-blue: #BAE6FD;
+  --color-pastel-pink: #FEE2E2;
+  --color-pastel-peach: #FFEDD5;
 }
 
 @layer base {
   body {
-    @apply bg-bg-light text-black font-sans antialiased transition-colors duration-300;
+    @apply bg-bg-light text-black font-sans antialiased;
+  }
+
+  /* Set default font color to black for all content elements */
+  h1, h2, h3, h4, h5, h6, p, label, input, textarea, select {
+    @apply text-black;
   }
 
   .dark body {
-    @apply bg-[#0A0A0A] text-white;
-  }
-
-  /* Force all headings and common text elements to be strict black/white */
-  h1, h2, h3, h4, h5, h6, p, span, div, label, input, textarea, select {
-    @apply text-black dark:text-white;
+    @apply bg-bg-light text-black;
   }
 }
 
