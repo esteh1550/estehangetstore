@@ -225,9 +225,23 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
           {!showCheckoutForm ? (
             <>
               <div className="space-y-4">
-                <span className="inline-block px-3 py-1 bg-tea-main/10 text-tea-main rounded-full text-xs font-bold uppercase tracking-widest text-outline">
-                  {product.category}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block px-3 py-1 bg-tea-main/10 text-tea-main rounded-full text-xs font-bold uppercase tracking-widest text-outline">
+                    {product.category}
+                  </span>
+                  {product.stock !== undefined && (
+                    <span className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
+                      product.stock === 0 ? "bg-red-500 text-white" : 
+                      product.stock <= 5 ? "bg-orange-500 text-white" : 
+                      "bg-green-500/10 text-green-600"
+                    )}>
+                      {product.stock === 0 ? "Stok Habis" : 
+                       product.stock <= 5 ? `Stok Menipis (Sisa ${product.stock})` : 
+                       "Tersedia"}
+                    </span>
+                  )}
+                </div>
                 <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter text-black dark:text-white text-outline">
                   {product.name}
                 </h1>

@@ -16,6 +16,7 @@ export interface Product {
   name: string;
   price: number;
   category: 'gadget' | 'pakaian' | 'sepatu' | 'digital';
+  stock?: number;
   images: string[];
   description: string;
   specifications: string[];

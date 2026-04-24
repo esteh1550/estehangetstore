@@ -44,6 +44,7 @@ service cloud.firestore {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
              data.price is number && data.price >= 0 &&
              data.category is string && data.category in ['gadget', 'pakaian', 'sepatu', 'digital'] &&
+             data.stock is number && data.stock >= 0 &&
              data.images is list && data.images.size() <= 10;
     }
 
@@ -71,7 +72,7 @@ service cloud.firestore {
       allow create: if isAdmin() && isValidProduct(incoming()) &&
                         incoming().keys().hasAll(['storeId', 'name', 'price', 'category']) && (incoming().keys().size() >= 4);
       allow update: if isAdmin() && isValidProduct(incoming()) &&
-                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'price', 'category', 'description', 'specifications', 'images', 'views', 'updatedAt']);
+                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'price', 'category', 'stock', 'description', 'specifications', 'images', 'views', 'updatedAt']);
       allow delete: if isAdmin();
     }
 

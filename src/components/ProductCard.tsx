@@ -3,7 +3,7 @@ import { Heart, ShoppingCart, Eye, Star, MapPin, Share2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
-import { formatPrice } from '../lib/utils';
+import { formatPrice, cn } from '../lib/utils';
 import { STORE } from '../constants';
 
 interface ProductCardProps {
@@ -30,6 +30,13 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
   }, [product.id]);
 
   const location = store?.location || 'Jakarta';
+  
+  const stockInfo = React.useMemo(() => {
+    if (product.stock === undefined) return null;
+    if (product.stock === 0) return { label: 'Habis', color: 'bg-red-500 text-white' };
+    if (product.stock <= 5) return { label: `Sisa ${product.stock}`, color: 'bg-orange-500 text-white' };
+    return { label: 'Tersedia', color: 'bg-green-500/10 text-green-600' };
+  }, [product.stock]);
 
   return (
     <motion.div
@@ -53,6 +60,11 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
           )}
           {store?.isMall && (
             <span className="bg-black text-white dark:bg-white dark:text-black text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">Mall</span>
+          )}
+          {stockInfo && (
+            <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-tighter", stockInfo.color)}>
+              {stockInfo.label}
+            </span>
           )}
         </div>
         

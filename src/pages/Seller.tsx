@@ -669,6 +669,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
   const [formData, setFormData] = React.useState({
     name: initialData?.name || '',
     price: initialData?.price || 0,
+    stock: initialData?.stock || 0,
     category: initialData?.category || 'gadget',
     description: initialData?.description || '',
     specifications: Array.isArray(initialData?.specifications) 
@@ -773,6 +774,20 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
                 className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black dark:text-white"
                 value={formData.price}
                 onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Stok Barang</label>
+            <div className="relative">
+              <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
+              <input
+                required
+                type="number"
+                className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black dark:text-white"
+                value={formData.stock}
+                onChange={e => setFormData({ ...formData, stock: Number(e.target.value) })}
               />
             </div>
           </div>
