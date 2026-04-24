@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -72,11 +72,20 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center w-full">
               <div className="space-y-4 text-center md:text-left">
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="inline-flex items-center gap-2 bg-black text-sky-blue px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
+                >
+                  <Star size={12} fill="currentColor" />
+                  {slides[current].isProduct ? "Produk Unggulan" : "Promo Spesial"}
+                </motion.div>
                 <motion.h2 
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="text-2xl md:text-5xl font-display font-bold text-black line-clamp-2"
+                  className="text-2xl md:text-5xl font-display font-bold text-black line-clamp-2 uppercase italic tracking-tighter"
                 >
                   {slides[current].title}
                 </motion.h2>

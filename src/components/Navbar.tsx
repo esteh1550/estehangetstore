@@ -74,7 +74,7 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
       <nav className={cn(
         "fixed top-6 left-0 right-0 z-50 transition-all duration-300 px-2 sm:px-4 py-3",
         isScrolled 
-          ? "bg-white/80 backdrop-blur-md shadow-sm" 
+          ? "bg-white/95 backdrop-blur-md shadow-xl border-b border-sky-blue/5" 
           : "bg-transparent"
       )}>
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 overflow-hidden">
