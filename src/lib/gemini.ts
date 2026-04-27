@@ -1,8 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import { Message } from "../types";
 import { PRODUCTS } from "../constants";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 const SYSTEM_INSTRUCTION = `
 Kamu adalah ESA, asisten pribadi laki-laki untuk brand e-commerce "ESTEHANGET".
@@ -24,19 +21,22 @@ Jika ditanya tentang kontak:
 
 export async function chatWithESA(messages: Message[]) {
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
-      })),
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-      },
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages,
+        systemInstruction: SYSTEM_INSTRUCTION
+      })
     });
 
-    return response.text || "Maaf Kak, ESA sedang istirahat sebentar. Bisa tanya lagi nanti?";
+    if (!response.ok) {
+      const errData = await response.json();
+      throw new Error(errData.error || "Gagal menghubungi AI");
+    }
+
+    const data = await response.json();
+    return data.text || "Maaf Kak, ESA sedang istirahat sebentar. Bisa tanya lagi nanti?";
   } catch (error: any) {
     console.error("ESA Error:", error);
     const msg = error.message || "";

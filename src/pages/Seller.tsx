@@ -26,7 +26,6 @@ import {
   ShieldAlert,
   Share2
 } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
 import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { 
@@ -853,49 +852,28 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
     setError(null);
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY_MISSING");
-      }
-      const ai = new GoogleGenAI({ apiKey });
-      const prompt = `Extract product information from this marketplace URL: ${url}. 
-      Use Google Search to resolve the link and find the actual product title, price, and description.
-      Return the data in the specified JSON format.`;
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              name: { type: Type.STRING },
-              price: { type: Type.NUMBER },
-              category: { type: Type.STRING },
-              description: { type: Type.STRING },
-              specifications: { type: Type.ARRAY, items: { type: Type.STRING } },
-              images: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ["name", "price", "category", "description"]
-          }
-        }
+      const response = await fetch("/api/extract-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
       });
 
-      const data = JSON.parse(response.text || '{}');
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || "Gagal mengekstrak data produk");
+      }
+
+      const data = await response.json();
       onImport(data);
       setUrl('');
       onClose();
     } catch (err: any) {
       console.error("Import failed:", err);
       const msg = err.message || "Unknown error";
-      if (msg === "GEMINI_API_KEY_MISSING") {
-        setError("API Key AI tidak ditemukan. Tambahkan 'VITE_GEMINI_API_KEY' di Environment Variables Vercel Anda.");
-      } else if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
-        setError("Batas pemakaian AI (Quota) telah habis untuk saat ini. Silakan coba lagi beberapa saat lagi atau gunakan kunci API yang berbeda.");
+      if (msg.includes("429") || msg.toLowerCase().includes("quota")) {
+        setError("Batas pemakaian AI (Quota) telah habis untuk saat ini. Silakan coba lagi beberapa saat lagi.");
       } else {
-        setError(`Error: ${msg.substring(0, 100)}... Pastikan kuncinya benar dan coba lagi.`);
+        setError(`Error: ${msg.substring(0, 100)}... Silakan coba lagi.`);
       }
     } finally {
       setLoading(false);

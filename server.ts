@@ -24,32 +24,31 @@ async function startServer() {
     }
 
     try {
-      // In a real app, we'd use a robust scraper. 
-      // For this environment, we'll use a mocked "scraping" or try to fetch content if possible.
-      // But scraping Tokopedia usually requires more than a simple fetch.
-      // We'll use Gemini to "simulate" extraction or provide a template if scraping fails.
-      
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("GEMINI_API_KEY_MISSING");
+      }
+      const ai = new GoogleGenAI({ apiKey });
       
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: `Extract product details (name, price, description, category, specifications, images) from this URL: ${url}. 
-        Find the current price in IDR if possible. Return ONLY valid JSON.`,
+        Use Google Search to find the actual data if needed.
+        Return the data in valid JSON format.`,
         config: {
           tools: [{ googleSearch: {} }],
-          toolConfig: { includeServerSideToolInvocations: true },
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
               name: { type: Type.STRING },
               price: { type: Type.NUMBER },
-              description: { type: Type.STRING },
               category: { type: Type.STRING, enum: ["gadget", "pakaian", "sepatu", "digital"] },
+              description: { type: Type.STRING },
               specifications: { type: Type.ARRAY, items: { type: Type.STRING } },
               images: { type: Type.ARRAY, items: { type: Type.STRING } }
             },
-            required: ["name", "price", "description", "category", "specifications", "images"]
+            required: ["name", "price", "category", "description"]
           }
         }
       });
@@ -58,7 +57,37 @@ async function startServer() {
       res.json(product);
     } catch (error: any) {
       console.error("Extraction error:", error);
-      res.status(500).json({ error: "Gagal mengekstrak data produk: " + error.message });
+      res.status(500).json({ error: error.message || "Gagal mengekstrak data produk" });
+    }
+  });
+
+  // AI Chat endpoint for ESA
+  app.post("/api/chat", async (req, res) => {
+    const { messages, systemInstruction } = req.body;
+    
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("GEMINI_API_KEY_MISSING");
+      }
+      const ai = new GoogleGenAI({ apiKey });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: messages.map((m: any) => ({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: [{ text: m.content }]
+        })),
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        },
+      });
+
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      res.status(500).json({ error: error.message || "Terjadi kesalahan pada AI" });
     }
   });
 
