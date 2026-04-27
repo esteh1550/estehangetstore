@@ -35,13 +35,6 @@ export default function App() {
   React.useEffect(() => {
     localStorage.setItem('esteh_cart', JSON.stringify(cart));
   }, [cart]);
-  const [isDarkMode, setIsDarkMode] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark';
-    }
-    return false;
-  });
-
   React.useEffect(() => {
     try {
       const savedUser = localStorage.getItem('user_session');
@@ -52,19 +45,6 @@ export default function App() {
       console.error("Failed to parse user session", e);
     }
   }, []);
-
-  React.useEffect(() => {
-    const root = window.document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      root.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
   const addToCart = (product: Product) => {
     setCart(prev => {
@@ -107,8 +87,6 @@ export default function App() {
           wishlistCount={wishlist.length}
           onOpenCart={() => setIsCartOpen(true)}
           onOpenWishlist={() => {}} // Could implement a wishlist page/sidebar
-          isDarkMode={isDarkMode}
-          onToggleDarkMode={toggleDarkMode}
         />
 
         <main className="flex-1">

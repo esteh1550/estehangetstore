@@ -12,22 +12,22 @@ interface HeroProps {
 const DEFAULT_BANNERS = [
   {
     id: 1,
-    title: "Ramadan Sale",
-    subtitle: "Diskon Hingga 50%",
+    title: "ESTEHANGET Special",
+    subtitle: "Dapatkan Produk Menarik dengan Harga Bersahabat",
     image: "https://i.postimg.cc/6qNqM5LX/Gemini_Generated_Image_9ye57e9ye57e9ye5.png",
-    color: "bg-sky-blue/20"
+    color: "bg-tea-main/20"
   },
   {
     id: 2,
-    title: "Gadget Terbaru",
-    subtitle: "Cicilan 0% s/d 12 Bulan",
+    title: "Barang Impian Kamu",
+    subtitle: "Kualitas Terjamin, Pengiriman Cepat",
     image: "https://picsum.photos/seed/gadget/1200/800",
-    color: "bg-sky-blue/10"
+    color: "bg-tea-main/10"
   },
   {
     id: 3,
-    title: "Fashion Minimalis",
-    subtitle: "Gratis Ongkir Seluruh Indonesia",
+    title: "Koleksi Terbaru",
+    subtitle: "Selalu Ada yang Baru untuk Kamu",
     image: "https://picsum.photos/seed/fashion/1200/800",
     color: "bg-white"
   }
@@ -43,7 +43,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
         title: p.name,
         subtitle: p.description,
         image: p.images[0],
-        color: i === 0 ? "bg-sky-blue/20" : i === 1 ? "bg-sky-blue/10" : "bg-white",
+        color: i === 0 ? "bg-tea-main/20" : i === 1 ? "bg-tea-main/10" : "bg-white",
         isProduct: true
       }));
     }
@@ -60,7 +60,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
 
   return (
     <section className="relative pt-28 pb-8 px-4 max-w-7xl mx-auto overflow-hidden">
-      <div className="relative aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden shadow-xl group border border-sky-blue/10">
+      <div className="relative aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden shadow-xl group border border-tea-main/10">
         <AnimatePresence mode="wait">
           <motion.div
             key={current}
@@ -76,7 +76,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.1 }}
-                  className="inline-flex items-center gap-2 bg-black text-sky-blue px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
+                  className="inline-flex items-center gap-2 bg-black text-tea-main px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
                 >
                   <Star size={12} fill="currentColor" />
                   {slides[current].isProduct ? "Produk Unggulan" : "Promo Spesial"}
@@ -104,7 +104,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
                   onClick={() => {
                     document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="bg-sky-blue text-black px-6 py-3 rounded-xl font-bold text-sm md:text-base hover:scale-105 transition-transform shadow-lg border border-black/10"
+                  className="bg-tea-main text-black px-6 py-3 rounded-xl font-bold text-sm md:text-base hover:scale-105 transition-transform shadow-lg border border-black/10"
                 >
                   Cek Sekarang
                 </motion.button>
@@ -143,7 +143,7 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
               onClick={() => setCurrent(i)}
               className={cn(
                 "w-2 h-2 rounded-full transition-all",
-                current === i ? "w-6 bg-black dark:bg-white" : "bg-black dark:bg-white opacity-20"
+                current === i ? "w-6 bg-black" : "bg-black opacity-20"
               )}
             />
           ))}

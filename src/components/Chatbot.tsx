@@ -72,12 +72,12 @@ export default function Chatbot() {
             initial={{ opacity: 0, scale: 0.8, y: 20, transformOrigin: 'bottom right' }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, y: 20 }}
-            className="absolute bottom-20 right-0 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] bg-bone dark:bg-[#1a1a1a] rounded-3xl shadow-2xl border border-black/10 dark:border-white/10 flex flex-col overflow-hidden"
+            className="absolute bottom-20 right-0 w-[350px] max-w-[calc(100vw-2rem)] h-[500px] bg-bone rounded-3xl shadow-2xl border border-black/10 flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="bg-black dark:bg-white p-4 flex items-center justify-between text-bone dark:text-black">
+            <div className="bg-black p-4 flex items-center justify-between text-bone">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white dark:bg-black rounded-full flex items-center justify-center text-black overflow-hidden border border-black/5 dark:border-white/5">
+                <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-black overflow-hidden border border-black/5">
                   <img src={CONTACT_INFO.logo} alt="ESA" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </div>
                 <div>
@@ -92,11 +92,11 @@ export default function Chatbot() {
                 <button 
                   onClick={clearHistory}
                   title="Hapus Riwayat"
-                  className="p-2 hover:bg-white/10 dark:hover:bg-black/10 rounded-full transition-colors"
+                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
                 >
                   <RotateCcw size={18} />
                 </button>
-                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 dark:hover:bg-black/10 rounded-full transition-colors">
+                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                   <X size={20} />
                 </button>
               </div>
@@ -117,7 +117,7 @@ export default function Chatbot() {
                   </div>
                   <div className={cn(
                     "p-3 rounded-2xl text-sm leading-relaxed",
-                    msg.role === 'user' ? "bg-tea-main text-white rounded-tr-none" : "bg-white dark:bg-black text-black dark:text-white shadow-sm rounded-tl-none border border-black/5 dark:border-white/5"
+                    msg.role === 'user' ? "bg-tea-main text-white rounded-tr-none" : "bg-white text-black shadow-sm rounded-tl-none border border-black/5"
                   )}>
                     {msg.content}
                   </div>
@@ -128,21 +128,21 @@ export default function Chatbot() {
                   <div className="w-8 h-8 rounded-full bg-tea-light text-white flex items-center justify-center">
                     <Bot size={16} />
                   </div>
-                  <div className="bg-white dark:bg-black p-4 rounded-2xl rounded-tl-none shadow-sm border border-black/5 dark:border-white/5 flex gap-1 items-center">
+                  <div className="bg-white p-4 rounded-2xl rounded-tl-none shadow-sm border border-black/5 flex gap-1 items-center">
                     <motion.div
                       animate={{ y: [0, -5, 0] }}
                       transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
-                      className="w-1.5 h-1.5 bg-black/40 dark:bg-white/40 rounded-full"
+                      className="w-1.5 h-1.5 bg-black/40 rounded-full"
                     />
                     <motion.div
                       animate={{ y: [0, -5, 0] }}
                       transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
-                      className="w-1.5 h-1.5 bg-black/40 dark:bg-white/40 rounded-full"
+                      className="w-1.5 h-1.5 bg-black/40 rounded-full"
                     />
                     <motion.div
                       animate={{ y: [0, -5, 0] }}
                       transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
-                      className="w-1.5 h-1.5 bg-black/40 dark:bg-white/40 rounded-full"
+                      className="w-1.5 h-1.5 bg-black/40 rounded-full"
                     />
                   </div>
                 </div>
@@ -150,11 +150,11 @@ export default function Chatbot() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="p-4 bg-white dark:bg-black border-t border-black/10 dark:border-white/10 flex gap-2">
+            <form onSubmit={handleSend} className="p-4 bg-white border-t border-black/10 flex gap-2">
               <input
                 type="text"
                 placeholder="Tanya ESA sesuatu..."
-                className="flex-1 bg-bone dark:bg-white/5 px-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/20 dark:focus:ring-white/20 transition-all text-black dark:text-white"
+                className="flex-1 bg-bone px-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/20 transition-all text-black"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
               />
@@ -177,7 +177,7 @@ export default function Chatbot() {
         className="bg-tea-main text-white p-4 rounded-full shadow-2xl flex items-center justify-center relative group"
       >
         <MessageSquare size={28} />
-        <span className="absolute right-full mr-4 bg-white dark:bg-black text-black dark:text-white px-3 py-1 rounded-lg text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-black/5 dark:border-white/5">
+        <span className="absolute right-full mr-4 bg-white text-black px-3 py-1 rounded-lg text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-black/5">
           Tanya ESA
         </span>
       </motion.button>

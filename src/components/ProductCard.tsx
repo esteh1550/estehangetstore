@@ -44,9 +44,9 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ y: -5 }}
-      className="bg-white dark:bg-[#1a1a1a] rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all group border border-black/5 dark:border-white/5 flex flex-col h-full"
+      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all group border border-black/5 flex flex-col h-full"
     >
-      <div className="relative aspect-square overflow-hidden bg-bg-light dark:bg-white/5">
+      <div className="relative aspect-square overflow-hidden bg-bg-light">
         <img
           src={product.images[0]}
           alt={product.name}
@@ -56,10 +56,10 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {store?.isStar && (
-            <span className="bg-sky-blue text-black text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">Star+</span>
+            <span className="bg-tea-main text-black text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">Star+</span>
           )}
           {store?.isMall && (
-            <span className="bg-black text-white dark:bg-white dark:text-black text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">Mall</span>
+            <span className="bg-black text-white text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-tighter">Mall</span>
           )}
           {stockInfo && (
             <span className={cn("text-[8px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-tighter", stockInfo.color)}>
@@ -75,7 +75,7 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
               e.stopPropagation();
               onToggleWishlist(product.id);
             }}
-            className={`p-2 rounded-full shadow-md transition-colors ${isWishlisted ? 'bg-red-500 text-white' : 'bg-white dark:bg-black text-black dark:text-white hover:bg-red-50 dark:hover:bg-red-900/20'}`}
+            className={`p-2 rounded-full shadow-md transition-colors ${isWishlisted ? 'bg-red-500 text-white' : 'bg-white text-black hover:bg-red-50'}`}
           >
             <Heart size={16} fill={isWishlisted ? 'currentColor' : 'none'} />
           </button>
@@ -85,9 +85,9 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
               e.stopPropagation();
               const url = `${window.location.origin}/product/${product.id}`;
               navigator.clipboard.writeText(url);
-              alert('Link produk disalin!');
+              // alert('Link produk disalin!');
             }}
-            className="p-2 bg-white dark:bg-black text-black dark:text-white rounded-full shadow-md hover:bg-sky-blue hover:text-black transition-all"
+            className="p-2 bg-white text-black rounded-full shadow-md hover:bg-tea-main hover:text-black transition-all"
             title="Bagikan"
           >
             <Share2 size={16} />
@@ -97,26 +97,26 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
 
       <div className="p-2 md:p-3 flex flex-col flex-1 space-y-2">
         <Link to={`/product/${product.id}`} className="flex-1">
-          <h3 className="font-medium text-xs md:text-sm line-clamp-2 text-black dark:text-white leading-snug hover:text-sky-blue transition-colors">
+          <h3 className="font-medium text-xs md:text-sm line-clamp-2 text-black leading-snug hover:text-tea-main transition-colors">
             {product.name}
           </h3>
         </Link>
         
         <div className="space-y-1">
-          <p className="text-sky-blue font-bold text-sm md:text-lg">{formatPrice(product.price)}</p>
+          <p className="text-tea-accent font-bold text-sm md:text-lg">{formatPrice(product.price)}</p>
           
-          <div className="flex items-center justify-between text-[10px] text-black dark:text-white">
+          <div className="flex items-center justify-between text-[10px] text-black">
             <div className="flex items-center gap-1">
-              <div className="flex items-center text-yellow-500">
+              <div className="flex items-center text-amber-500">
                 <Star size={10} fill="currentColor" />
-                <span className="ml-0.5 font-bold text-black dark:text-white">{rating}</span>
+                <span className="ml-0.5 font-bold text-black">{rating}</span>
               </div>
               <span className="mx-1">|</span>
               <span>Terjual {soldCount}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-[10px] text-black dark:text-white pt-1">
+          <div className="flex items-center gap-1 text-[10px] text-black pt-1">
             <MapPin size={10} />
             <span>{location}</span>
           </div>
@@ -124,7 +124,7 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
 
         <button
           onClick={() => onAddToCart(product)}
-          className="w-full mt-2 border border-sky-blue text-sky-blue hover:bg-sky-blue hover:text-black py-1.5 rounded-lg font-bold text-[10px] md:text-xs transition-colors flex items-center justify-center gap-2"
+          className="w-full mt-2 border border-tea-main text-tea-main hover:bg-tea-main hover:text-black py-1.5 rounded-lg font-bold text-[10px] md:text-xs transition-colors flex items-center justify-center gap-2"
         >
           <ShoppingCart size={12} /> Beli Sekarang
         </button>

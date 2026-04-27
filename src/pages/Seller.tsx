@@ -138,7 +138,7 @@ export default function Seller() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tea-main"></div>
-        <p className="text-black/40 dark:text-white/40 font-medium animate-pulse">
+        <p className="text-black/40 font-medium animate-pulse">
           {authLoading ? 'Memverifikasi Hak Akses Cloud...' : 'Memuat data toko...'}
         </p>
       </div>
@@ -151,12 +151,12 @@ export default function Seller() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center gap-6">
-        <div className="w-20 h-20 bg-red-50 dark:bg-red-900/10 rounded-full flex items-center justify-center text-red-500">
+        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-500">
           <X size={40} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-black dark:text-white">Waduh, Ada Masalah</h2>
-          <p className="text-black/60 dark:text-white/60 max-w-md">{error}</p>
+          <h2 className="text-2xl font-bold text-black">Waduh, Ada Masalah</h2>
+          <p className="text-black/60 max-w-md">{error}</p>
         </div>
         <button 
           onClick={() => navigate('/admin')}
@@ -169,12 +169,12 @@ export default function Seller() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-light dark:bg-[#0a0a0a] pb-20 pt-28">
+    <div className="min-h-screen bg-bg-light pb-20 pt-28">
       {/* Header */}
-      <div className="bg-white dark:bg-black border-b border-black/5 dark:border-white/5 sticky top-[88px] z-30">
+      <div className="bg-white border-b border-black/5 sticky top-[88px] z-30">
       <div className="max-w-7xl mx-auto px-4 h-auto min-h-[4rem] py-2 md:h-16 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center overflow-hidden">
               {store?.logo ? (
                 <img src={store.logo} alt={store.name} className="w-full h-full object-cover" />
               ) : (
@@ -182,14 +182,14 @@ export default function Seller() {
               )}
             </div>
             <div>
-              <h1 className="font-bold text-black dark:text-white">{store?.name || 'Toko Belum Siap'}</h1>
-              <p className="text-[10px] text-black/40 dark:text-white/40 uppercase font-bold tracking-widest">
+              <h1 className="font-bold text-black">{store?.name || 'Toko Belum Siap'}</h1>
+              <p className="text-[10px] text-black/40 uppercase font-bold tracking-widest">
                 Seller Center ({isFirebaseEnabled ? 'Cloud' : 'Lokal'})
               </p>
             </div>
           </div>
           {store && (
-            <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl">
+            <div className="flex bg-black/5 p-1 rounded-xl">
               <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={16} />} label="Dashboard" />
               <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<Package size={16} />} label="Produk" />
               <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={16} />} label="Toko" />
@@ -210,8 +210,8 @@ export default function Seller() {
                 <ShieldAlert size={24} />
               </div>
               <div>
-                <h3 className="font-bold text-black dark:text-white">Sinkronisasi Cloud Diperlukan</h3>
-                <p className="text-sm text-black/40 dark:text-white/40">Data toko ada di Database Cloud. Silakan login Google untuk melihat dan mengelola produk Anda.</p>
+                <h3 className="font-bold text-black">Sinkronisasi Cloud Diperlukan</h3>
+                <p className="text-sm text-black/40">Data toko ada di Database Cloud. Silakan login Google untuk melihat dan mengelola produk Anda.</p>
               </div>
             </div>
             <button 
@@ -260,11 +260,11 @@ export default function Seller() {
               className="space-y-6"
             >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <h2 className="text-xl font-bold text-black dark:text-white">Daftar Produk</h2>
+                <h2 className="text-xl font-bold text-black">Daftar Produk</h2>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   <button 
                     onClick={() => setIsImportingLink(true)}
-                    className="flex-1 sm:flex-none bg-black/5 dark:bg-white/10 text-black dark:text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-all border border-black/5 dark:border-white/5"
+                    className="flex-1 sm:flex-none bg-black/5 text-black px-4 py-2 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-black/10 transition-all border border-black/5"
                   >
                     <LinkIcon size={18} className="text-tea-main" />
                     <span className="hidden sm:inline">Import Link (AI)</span>
@@ -295,9 +295,9 @@ export default function Seller() {
                   </div>
                 ))}
                 {products.length === 0 && (
-                  <div className="col-span-full py-20 text-center bg-white dark:bg-black rounded-3xl border-2 border-dashed border-black/10 dark:border-white/10">
+                  <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-black/10">
                     <Package size={48} className="mx-auto mb-4 opacity-20" />
-                    <p className="text-black/40 dark:text-white/40 font-bold">Belum ada produk. Mulai jualan sekarang!</p>
+                    <p className="text-black/40 font-bold">Belum ada produk. Mulai jualan sekarang!</p>
                   </div>
                 )}
               </div>
@@ -312,9 +312,9 @@ export default function Seller() {
               exit={{ opacity: 0, y: -20 }}
               className="max-w-2xl mx-auto"
             >
-              <div className="bg-white dark:bg-black p-8 rounded-3xl border border-black/5 dark:border-white/5 shadow-sm space-y-8">
+              <div className="bg-white p-8 rounded-3xl border border-black/5 shadow-sm space-y-8">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-black dark:text-white">Informasi Toko</h2>
+                  <h2 className="text-xl font-bold text-black">Informasi Toko</h2>
                   <button 
                     onClick={() => setIsEditingStore(!isEditingStore)}
                     className="text-tea-main font-bold text-sm hover:underline"
@@ -330,16 +330,16 @@ export default function Seller() {
                     <div className="flex items-center gap-6">
                       <img src={store.logo} alt={store.name} className="w-24 h-24 rounded-3xl object-cover shadow-xl" />
                       <div>
-                        <h3 className="text-2xl font-bold text-black dark:text-white">{store.name}</h3>
-                        <p className="text-black/60 dark:text-white/60 flex items-center gap-1">
+                        <h3 className="text-2xl font-bold text-black">{store.name}</h3>
+                        <p className="text-black/60 flex items-center gap-1">
                           <MapPin size={14} />
                           {store.location}
                         </p>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <h4 className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Deskripsi Toko</h4>
-                      <p className="text-black/80 dark:text-white/80 leading-relaxed">{store.description}</p>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-black/40">Deskripsi Toko</h4>
+                      <p className="text-black/80 leading-relaxed">{store.description}</p>
                     </div>
                   </div>
                 )}
@@ -349,9 +349,9 @@ export default function Seller() {
         </AnimatePresence>
         ) : (
           !authLoading && !isFirebaseAuthed && isFirebaseEnabled && (
-            <div className="text-center py-20 bg-white dark:bg-black rounded-3xl border-2 border-dashed border-black/10 dark:border-white/10">
+            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-black/10">
               <ShieldAlert size={48} className="mx-auto mb-4 opacity-20" />
-              <p className="text-black/40 dark:text-white/40 font-bold px-6">Gagal memuat data toko. Pastikan Anda sudah memberikan otorisasi Cloud melalui tombol di atas.</p>
+              <p className="text-black/40 font-bold px-6">Gagal memuat data toko. Pastikan Anda sudah memberikan otorisasi Cloud melalui tombol di atas.</p>
             </div>
           )
         )}
@@ -387,13 +387,13 @@ export default function Seller() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden"
             >
-              <div className="p-6 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-black dark:text-white">
+              <div className="p-6 border-b border-black/5 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-black">
                   {editingProduct?.id ? 'Edit Produk' : 'Tambah Produk Baru'}
                 </h3>
-                <button onClick={() => { setIsAddingProduct(false); setEditingProduct(null); }} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full">
+                <button onClick={() => { setIsAddingProduct(false); setEditingProduct(null); }} className="p-2 hover:bg-black/5 rounded-full">
                   <X size={20} />
                 </button>
               </div>
@@ -428,14 +428,14 @@ export default function Seller() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl overflow-hidden p-8 text-center space-y-6"
+              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden p-8 text-center space-y-6"
             >
               <div className="w-20 h-20 bg-tea-main/10 rounded-full flex items-center justify-center mx-auto text-tea-main">
                 <Package size={40} />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-black dark:text-white">Produk Terbit!</h2>
-                <p className="text-sm text-black/60 dark:text-white/60">Produk Anda sudah aktif dan bisa dilihat oleh pelanggan di Marketplace.</p>
+                <h2 className="text-2xl font-bold text-black">Produk Terbit!</h2>
+                <p className="text-sm text-black/60">Produk Anda sudah aktif dan bisa dilihat oleh pelanggan di Marketplace.</p>
               </div>
               <div className="grid grid-cols-1 gap-3">
                 <Link 
@@ -451,13 +451,13 @@ export default function Seller() {
                     navigator.clipboard.writeText(url);
                     alert('Link produk disalin!');
                   }}
-                  className="bg-black/5 dark:bg-white/5 text-black dark:text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-sm hover:bg-black/10 dark:hover:bg-white/10"
+                  className="bg-black/5 text-black py-4 rounded-2xl font-bold flex items-center justify-center gap-2 text-sm hover:bg-black/10"
                 >
                   <Share2 size={16} /> Salin Link Produk
                 </button>
                 <button 
                   onClick={() => setSuccessProductId(null)}
-                  className="text-black/40 dark:text-white/40 font-bold py-2 text-sm hover:text-black dark:hover:text-white transition-colors"
+                  className="text-black/40 font-bold py-2 text-sm hover:text-black transition-colors"
                 >
                   Tutup
                 </button>
@@ -477,8 +477,8 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
       className={cn(
         "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all",
         active 
-          ? "bg-white dark:bg-black text-tea-main shadow-sm" 
-          : "text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white"
+          ? "bg-white text-tea-main shadow-sm" 
+          : "text-black/40 hover:text-black"
       )}
     >
       {icon}
@@ -489,13 +489,13 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
 
 function StatCard({ title, value, icon }: { title: string, value: string | number, icon: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-black p-6 rounded-3xl border border-black/5 dark:border-white/5 shadow-sm space-y-4">
+    <div className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm space-y-4">
       <div className="w-10 h-10 rounded-xl bg-tea-main/10 flex items-center justify-center">
         {icon}
       </div>
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">{title}</p>
-        <p className="text-2xl font-bold text-black dark:text-white">{value}</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-black/40">{title}</p>
+        <p className="text-2xl font-bold text-black">{value}</p>
       </div>
     </div>
   );
@@ -518,35 +518,35 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
   };
 
   return (
-    <div className="bg-white dark:bg-black rounded-3xl border border-black/5 dark:border-white/5 overflow-hidden group shadow-sm">
+    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden group shadow-sm">
       <div className="aspect-video relative overflow-hidden">
         <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
         <div className="absolute top-4 right-4 flex gap-2">
           <button 
             title="Bagikan Link Produk"
             onClick={handleShare} 
-            className="p-2 bg-white/90 dark:bg-black/90 text-sky-blue rounded-xl shadow-lg hover:scale-110 transition-all"
+            className="p-2 bg-white/90 text-sky-blue rounded-xl shadow-lg hover:scale-110 transition-all"
           >
             <Share2 size={16} />
           </button>
-          <button onClick={onEdit} className="p-2 bg-white/90 dark:bg-black/90 text-tea-main rounded-xl shadow-lg hover:scale-110 transition-all">
+          <button onClick={onEdit} className="p-2 bg-white/90 text-tea-main rounded-xl shadow-lg hover:scale-110 transition-all">
             <Edit2 size={16} />
           </button>
-          <button onClick={onDelete} className="p-2 bg-white/90 dark:bg-black/90 text-red-500 rounded-xl shadow-lg hover:scale-110 transition-all">
+          <button onClick={onDelete} className="p-2 bg-white/90 text-red-500 rounded-xl shadow-lg hover:scale-110 transition-all">
             <Trash2 size={16} />
           </button>
         </div>
       </div>
       <div className="p-4 space-y-2">
         <Link to={`/product/${product.id}`}>
-          <h4 className="font-bold text-black dark:text-white truncate hover:text-tea-main transition-colors">{product.name}</h4>
+          <h4 className="font-bold text-black truncate hover:text-tea-main transition-colors">{product.name}</h4>
         </Link>
         <p className="text-tea-main font-bold">{formatPrice(product.price)}</p>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 dark:bg-white/5 px-2 py-1 rounded-lg text-black/40 dark:text-white/40">
+          <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 px-2 py-1 rounded-lg text-black/40">
             {product.category}
           </span>
-          <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 dark:text-white/30 uppercase tracking-widest">
+          <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 uppercase tracking-widest">
             <Eye size={10} />
             <span>{product.views || 0} views</span>
           </div>
@@ -593,11 +593,11 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
       <div className="space-y-4">
         <div className="flex justify-center">
           <div className="relative group">
-            <div className="w-24 h-24 rounded-3xl bg-black/5 dark:bg-white/5 flex items-center justify-center overflow-hidden border-2 border-dashed border-black/10 dark:border-white/10 group-hover:border-tea-main transition-colors">
+            <div className="w-24 h-24 rounded-3xl bg-black/5 flex items-center justify-center overflow-hidden border-2 border-dashed border-black/10 group-hover:border-tea-main transition-colors">
               {(logoFile || formData.logo) ? (
                 <img src={logoFile ? URL.createObjectURL(logoFile) : formData.logo} alt="Logo" className="w-full h-full object-cover" />
               ) : (
-                <ImageIcon size={32} className="text-black/20 dark:text-white/20" />
+                <ImageIcon size={32} className="text-black/20" />
               )}
             </div>
             <input 
@@ -613,12 +613,12 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40 ml-2">Nama Toko</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-black/40 ml-2">Nama Toko</label>
           <div className="relative">
             <StoreIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
             <input
               required
-              className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black dark:text-white"
+              className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black"
               placeholder="Contoh: Esteh Gadget Official"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -627,12 +627,12 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40 ml-2">Lokasi</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-black/40 ml-2">Lokasi</label>
           <div className="relative">
             <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
             <input
               required
-              className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black dark:text-white"
+              className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black"
               placeholder="Contoh: Jakarta Selatan"
               value={formData.location}
               onChange={e => setFormData({ ...formData, location: e.target.value })}
@@ -641,10 +641,10 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40 ml-2">Deskripsi Toko</label>
+          <label className="text-xs font-bold uppercase tracking-widest text-black/40 ml-2">Deskripsi Toko</label>
           <textarea
             required
-            className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl p-4 text-sm transition-all text-black dark:text-white min-h-[100px]"
+            className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl p-4 text-sm transition-all text-black min-h-[100px]"
             placeholder="Ceritakan tentang toko Anda..."
             value={formData.description}
             onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -723,7 +723,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Foto Produk</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Foto Produk</label>
             <div className="grid grid-cols-3 gap-2">
               {formData.images.map((img, i) => (
                 <div key={i} className="aspect-square relative rounded-xl overflow-hidden border border-black/5">
@@ -737,7 +737,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
                   </button>
                 </div>
               ))}
-              <div className="aspect-square relative bg-black/5 dark:bg-white/5 rounded-xl flex items-center justify-center border-2 border-dashed border-black/10 dark:border-white/10 hover:border-tea-main transition-colors cursor-pointer">
+              <div className="aspect-square relative bg-black/5 rounded-xl flex items-center justify-center border-2 border-dashed border-black/10 hover:border-tea-main transition-colors cursor-pointer">
                 <Plus size={24} className="text-black/20" />
                 <input 
                   type="file" 
@@ -754,23 +754,23 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Nama Produk</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Nama Produk</label>
             <input
               required
-              className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl px-4 py-4 text-sm transition-all text-black dark:text-white"
+              className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl px-4 py-4 text-sm transition-all text-black"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Harga</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Harga</label>
             <div className="relative">
               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
               <input
                 required
                 type="number"
-                className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black dark:text-white"
+                className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black"
                 value={formData.price}
                 onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
               />
@@ -778,13 +778,13 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Stok Barang</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Stok Barang</label>
             <div className="relative">
               <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
               <input
                 required
                 type="number"
-                className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black dark:text-white"
+                className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black"
                 value={formData.stock}
                 onChange={e => setFormData({ ...formData, stock: Number(e.target.value) })}
               />
@@ -794,9 +794,9 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Kategori</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Kategori</label>
             <select
-              className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl px-4 py-4 text-sm transition-all text-black dark:text-white appearance-none"
+              className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl px-4 py-4 text-sm transition-all text-black appearance-none"
               value={formData.category}
               onChange={e => setFormData({ ...formData, category: e.target.value as any })}
             >
@@ -808,19 +808,19 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Deskripsi</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Deskripsi</label>
             <textarea
               required
-              className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl p-4 text-sm transition-all text-black dark:text-white min-h-[100px]"
+              className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl p-4 text-sm transition-all text-black min-h-[100px]"
               value={formData.description}
               onChange={e => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Spesifikasi (Satu per baris)</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Spesifikasi (Satu per baris)</label>
             <textarea
-              className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl p-4 text-sm transition-all text-black dark:text-white min-h-[100px]"
+              className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl p-4 text-sm transition-all text-black min-h-[100px]"
               placeholder="Contoh:&#10;RAM 8GB&#10;Layar AMOLED&#10;Baterai 5000mAh"
               value={formData.specifications}
               onChange={e => setFormData({ ...formData, specifications: e.target.value })}
@@ -895,23 +895,23 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-2xl p-8 space-y-6"
+        className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 space-y-6"
       >
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-tea-main/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
             <Sparkles size={32} className="text-tea-main" />
           </div>
-          <h3 className="text-xl font-bold text-black dark:text-white">AI Product Importer</h3>
-          <p className="text-sm text-black/60 dark:text-white/60">Tempel link produk (Topedia/Shopee/dll) dan biarkan AI mengisi datanya otomatis.</p>
+          <h3 className="text-xl font-bold text-black">AI Product Importer</h3>
+          <p className="text-sm text-black/60">Tempel link produk (Topedia/Shopee/dll) dan biarkan AI mengisi datanya otomatis.</p>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Link Marketplace</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Link Marketplace</label>
             <div className="relative">
               <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
               <input
-                className="w-full bg-black/5 dark:bg-white/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black dark:text-white"
+                className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black"
                 placeholder="https://vt.tokopedia.com/t/ZS9Lb3J8ExMWB-wAO94/"
                 value={url}
                 onChange={e => setUrl(e.target.value)}
@@ -924,7 +924,7 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
           <div className="flex gap-3">
             <button 
               onClick={onClose}
-              className="flex-1 py-4 text-black/40 dark:text-white/40 font-bold hover:text-black dark:hover:text-white transition-all"
+              className="flex-1 py-4 text-black/40 font-bold hover:text-black transition-all"
             >
               Batal
             </button>
@@ -942,3 +942,4 @@ function ImportLinkModal({ isOpen, onClose, onImport }: { isOpen: boolean, onClo
     </div>
   );
 }
+

@@ -35,11 +35,11 @@ function FlashSaleTimer() {
 
   return (
     <div className="flex items-center gap-1">
-      <span className="bg-sky-blue text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.h.toString().padStart(2, '0')}</span>
+      <span className="bg-tea-main text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.h.toString().padStart(2, '0')}</span>
       <span className="text-black font-bold">:</span>
-      <span className="bg-sky-blue text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.m.toString().padStart(2, '0')}</span>
+      <span className="bg-tea-main text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.m.toString().padStart(2, '0')}</span>
       <span className="text-black font-bold">:</span>
-      <span className="bg-sky-blue text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.s.toString().padStart(2, '0')}</span>
+      <span className="bg-tea-main text-black px-1.5 py-0.5 rounded text-xs font-bold">{timeLeft.s.toString().padStart(2, '0')}</span>
     </div>
   );
 }
@@ -73,11 +73,11 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
   const categories = ['all', 'gadget', 'pakaian', 'sepatu', 'digital'];
 
   const categoriesData = [
-    { id: 'gadget', name: 'Gadget', icon: <Smartphone size={24} />, color: 'bg-sky-blue/10 text-black' },
-    { id: 'pakaian', name: 'Pakaian', icon: <Shirt size={24} />, color: 'bg-sky-blue/5 text-black' },
-    { id: 'sepatu', name: 'Sepatu', icon: <Footprints size={24} />, color: 'bg-sky-blue/10 text-black' },
-    { id: 'digital', name: 'Digital', icon: <Laptop size={24} />, color: 'bg-sky-blue/5 text-black' },
-    { id: 'gift', name: 'Hadiah', icon: <Gift size={24} />, color: 'bg-sky-blue/10 text-black' },
+    { id: 'gadget', name: 'Gadget', icon: <Smartphone size={24} />, color: 'bg-tea-main/10 text-black' },
+    { id: 'pakaian', name: 'Pakaian', icon: <Shirt size={24} />, color: 'bg-tea-main/5 text-black' },
+    { id: 'sepatu', name: 'Sepatu', icon: <Footprints size={24} />, color: 'bg-tea-main/20 text-black' },
+    { id: 'digital', name: 'Digital', icon: <Laptop size={24} />, color: 'bg-tea-main/5 text-black' },
+    { id: 'gift', name: 'Hadiah', icon: <Gift size={24} />, color: 'bg-tea-main/15 text-black' },
   ];
 
   const suggestions = React.useMemo(() => {
@@ -146,16 +146,16 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
       {isShop && (
         <section className="max-w-7xl mx-auto px-4 pt-8">
           <div className="flex flex-col gap-2">
-            <h1 className="text-4xl font-display font-bold tracking-tighter text-black dark:text-white uppercase italic">Katalog Produk</h1>
-            <p className="text-black dark:text-white">Temukan berbagai produk berkualitas dari toko-toko mitra kami.</p>
+            <h1 className="text-4xl font-display font-bold tracking-tighter text-black uppercase italic">Katalog Produk</h1>
+            <p className="text-black">Temukan berbagai produk berkualitas dari toko-toko mitra kami.</p>
           </div>
         </section>
       )}
 
       {/* Category Grid */}
       <section className="max-w-7xl mx-auto px-4">
-        <div className="bg-white dark:bg-black p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm">
-          <h3 className="text-xs font-bold uppercase tracking-widest text-black dark:text-white mb-6 ml-2">Kategori Pilihan</h3>
+        <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-black mb-6 ml-2">Kategori Pilihan</h3>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
             {categoriesData.map((cat) => (
               <button
@@ -172,7 +172,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                 )}>
                   {cat.icon}
                 </div>
-                <span className="text-xs font-bold text-black dark:text-white group-hover:text-black dark:group-hover:text-white transition-colors">{cat.name}</span>
+                <span className="text-xs font-bold text-black transition-colors">{cat.name}</span>
               </button>
             ))}
           </div>
@@ -182,8 +182,8 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
       {/* Flash Sale Section */}
       {!isShop && allProducts.length > 0 && (
         <section className="max-w-7xl mx-auto px-4">
-          <div className="bg-white dark:bg-black rounded-2xl border border-black/5 dark:border-white/5 shadow-sm overflow-hidden">
-            <div className="p-6 border-b border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="bg-white rounded-2xl border border-tea-main/20 shadow-xl overflow-hidden ring-4 ring-tea-main/5">
+            <div className="p-6 border-b border-black/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-tea-light/30">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2 text-red-600">
                   <Zap size={24} fill="currentColor" className="animate-pulse" />
@@ -209,7 +209,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                     onClick={() => onViewDetails(product)}
                     className="w-40 space-y-2 group cursor-pointer"
                   >
-                    <div className="relative aspect-square rounded-xl overflow-hidden bg-bg-light dark:bg-white/5 animate-shimmer">
+                    <div className="relative aspect-square rounded-xl overflow-hidden bg-bg-light animate-shimmer">
                       <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" referrerPolicy="no-referrer" />
                       <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-10 animate-pulse">
                         -30%
@@ -221,13 +221,13 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                     <div className="space-y-1">
                       <div className="flex flex-col">
                         <p className="text-red-600 font-bold text-sm">{formatPrice(product.price)}</p>
-                        <p className="text-[10px] text-black/40 dark:text-white/40 line-through">{formatPrice(product.price / 0.7)}</p>
+                        <p className="text-[10px] text-black/40 line-through">{formatPrice(product.price / 0.7)}</p>
                       </div>
                       <div className="space-y-1 pt-1">
-                        <div className="w-full h-2 bg-black/10 dark:bg-white/20 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
                           <div className="h-full bg-red-600 w-3/4" />
                         </div>
-                        <p className="text-[8px] md:text-[10px] font-bold text-black/80 dark:text-white/90 uppercase">75% Terjual</p>
+                        <p className="text-[8px] md:text-[10px] font-bold text-black/80 uppercase">75% Terjual</p>
                       </div>
                     </div>
                   </div>
@@ -241,8 +241,8 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
       {/* Recommendation History Section */}
       {!isShop && recommendedProducts.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 space-y-8">
-          <div className="flex items-center gap-2 text-black dark:text-white">
-            <Gift size={20} className="text-tea-main" />
+          <div className="flex items-center gap-2 text-black">
+            <Gift size={20} className="text-tea-accent" />
             <h2 className="text-xl font-display font-bold tracking-tighter uppercase italic">Spesial Untukmu</h2>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
@@ -263,8 +263,8 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
       {/* Recently Viewed */}
       {!isShop && history.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 space-y-8">
-          <div className="flex items-center gap-2 text-black dark:text-white">
-            <Eye size={20} className="text-sky-blue" />
+          <div className="flex items-center gap-2 text-black">
+            <Eye size={20} className="text-tea-main" />
             <h2 className="text-xl font-display font-bold tracking-tighter uppercase italic">Terakhir Dilihat</h2>
           </div>
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
@@ -274,10 +274,10 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                 onClick={() => onViewDetails(product)}
                 className="w-32 flex-shrink-0 cursor-pointer group"
               >
-                <div className="aspect-square rounded-xl overflow-hidden bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 mb-2">
+                <div className="aspect-square rounded-xl overflow-hidden bg-white border border-black/5 mb-2">
                   <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
                 </div>
-                <p className="text-[10px] font-bold text-black dark:text-white truncate">{product.name}</p>
+                <p className="text-[10px] font-bold text-black truncate">{product.name}</p>
               </div>
             ))}
           </div>
@@ -286,10 +286,10 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
 
       {/* Product Section */}
       <section id="produk-list" className="max-w-7xl mx-auto px-4 space-y-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-white dark:bg-black p-6 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
           <div className="space-y-2">
-            <h2 className="text-2xl font-display font-bold tracking-tighter text-black dark:text-white uppercase italic">Rekomendasi</h2>
-            <div className="h-1 w-20 bg-sky-blue rounded-full" />
+            <h2 className="text-2xl font-display font-bold tracking-tighter text-black uppercase italic">Rekomendasi</h2>
+            <div className="h-1 w-20 bg-tea-main rounded-full" />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
@@ -297,7 +297,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
               <select 
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 text-black dark:text-white font-bold cursor-pointer"
+                className="bg-white border border-black/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 text-black font-bold cursor-pointer"
               >
                 <option value="newest">Terbaru</option>
                 <option value="price-low">Harga Terendah</option>
@@ -310,24 +310,24 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                   placeholder="Min"
                   value={minPrice}
                   onChange={(e) => setMinPrice(e.target.value)}
-                  className="w-full sm:w-24 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 transition-all text-black dark:text-white"
+                  className="w-full sm:w-24 bg-white border border-black/5 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 transition-all text-black"
                 />
-                <span className="text-black/20 dark:text-white/20">-</span>
+                <span className="text-black/20">-</span>
                 <input 
                   type="number" 
                   placeholder="Max"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
-                  className="w-full sm:w-24 bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 transition-all text-black dark:text-white"
+                  className="w-full sm:w-24 bg-white border border-black/5 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 transition-all text-black"
                 />
               </div>
 
               <div className="relative col-span-2 sm:col-span-1" ref={suggestionsRef}>
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-black dark:text-white" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-black" size={18} />
                 <input
                   type="text"
                   placeholder="Cari produk..."
-                  className="bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 dark:focus:ring-white/10 w-full sm:w-64 transition-all text-black dark:text-white"
+                  className="bg-white border border-black/5 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 w-full sm:w-64 transition-all text-black"
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -342,7 +342,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
-                      className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1a1a] border border-black dark:border-white rounded-2xl shadow-2xl overflow-hidden z-20"
+                      className="absolute top-full left-0 right-0 mt-2 bg-white border border-black rounded-2xl shadow-2xl overflow-hidden z-20"
                     >
                       {suggestions.map((s, i) => (
                         <button
@@ -356,12 +356,12 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                             }
                             setShowSuggestions(false);
                           }}
-                          className="w-full px-4 py-3 text-left hover:bg-black/5 dark:hover:bg-white/5 flex items-center gap-3 transition-colors"
+                          className="w-full px-4 py-3 text-left hover:bg-black/5 flex items-center gap-3 transition-colors"
                         >
-                          <Search size={14} className="text-black dark:text-white" />
+                          <Search size={14} className="text-black" />
                           <div className="flex-1">
-                            <p className="text-sm font-bold text-black dark:text-white">{s.value}</p>
-                            <p className="text-[10px] uppercase tracking-widest text-black dark:text-white font-black">
+                            <p className="text-sm font-bold text-black">{s.value}</p>
+                            <p className="text-[10px] uppercase tracking-widest text-black font-black">
                               {s.type === 'category' ? 'Kategori' : 'Produk'}
                             </p>
                           </div>
@@ -378,8 +378,8 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                 className={cn(
                   "px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap",
                   category === 'all' 
-                    ? "bg-sky-blue text-black shadow-lg shadow-sky-blue/20" 
-                    : "bg-white dark:bg-white/5 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
+                    ? "bg-tea-main text-black shadow-lg shadow-tea-main/20" 
+                    : "bg-white text-black hover:bg-black/5"
                 )}
               >
                 Semua
@@ -391,8 +391,8 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                   className={cn(
                     "px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap",
                     category === cat.id 
-                      ? "bg-sky-blue text-black shadow-lg shadow-sky-blue/20" 
-                      : "bg-white dark:bg-white/5 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
+                      ? "bg-tea-main text-black shadow-lg shadow-tea-main/20" 
+                      : "bg-white text-black hover:bg-black/5"
                   )}
                 >
                   {cat.name}
@@ -417,11 +417,11 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
             />
           ))}
           {filteredProducts.length === 0 && (
-            <div className="col-span-full py-20 text-center space-y-4 opacity-50 text-black dark:text-white">
+            <div className="col-span-full py-20 text-center space-y-4 opacity-50 text-black">
               <Package size={48} className="mx-auto" />
               <p className="text-xl font-medium">Belum ada produk tersedia nih Kak.</p>
               { (search || category !== 'all') && (
-                <button onClick={() => { setSearch(''); setCategory('all'); }} className="text-black dark:text-white font-bold underline">Reset Filter</button>
+                <button onClick={() => { setSearch(''); setCategory('all'); }} className="text-black font-bold underline">Reset Filter</button>
               )}
             </div>
           )}
@@ -430,23 +430,23 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
 
       {/* FAQ Section */}
       {!isShop && (
-        <section className="bg-white dark:bg-black py-20 px-4">
+        <section className="bg-white py-20 px-4">
           <div className="max-w-3xl mx-auto space-y-12">
             <div className="text-center space-y-4">
-              <h2 className="text-4xl font-display font-bold tracking-tighter text-black dark:text-white">Pertanyaan Umum</h2>
-              <p className="text-black dark:text-white">Semua yang perlu Anda ketahui tentang belanja di ESTEHANGET.</p>
+              <h2 className="text-4xl font-display font-bold tracking-tighter text-black">Pertanyaan Umum</h2>
+              <p className="text-black">Semua yang perlu Anda ketahui tentang belanja di ESTEHANGET.</p>
             </div>
             <div className="space-y-4">
               {faqs.map((faq, i) => (
                 <div 
                   key={i}
-                  className="border border-black/10 dark:border-white/10 rounded-2xl overflow-hidden"
+                  className="border border-black/10 rounded-2xl overflow-hidden"
                 >
                   <button 
                     onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="w-full flex items-center justify-between p-6 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                    className="w-full flex items-center justify-between p-6 text-left hover:bg-black/5 transition-colors"
                   >
-                    <span className="font-bold text-black dark:text-white">{faq.q}</span>
+                    <span className="font-bold text-black">{faq.q}</span>
                     {openFaq === i ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                   </button>
                   <AnimatePresence>
@@ -457,7 +457,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
-                        <div className="p-6 pt-0 text-black dark:text-white text-sm leading-relaxed">
+                        <div className="p-6 pt-0 text-black text-sm leading-relaxed">
                           {faq.a}
                         </div>
                       </motion.div>
@@ -471,14 +471,14 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
       )}
 
       {/* Why Us Section */}
-      <section className="bg-sky-blue/20 dark:bg-sky-blue/10 py-20 px-4 border-y border-sky-blue/10">
+      <section className="bg-tea-main/20 py-20 px-4 border-y border-tea-main/10">
         <div className="max-w-7xl mx-auto flex justify-center">
           <div className="text-center space-y-4 max-w-sm">
-            <div className="w-16 h-16 bg-white dark:bg-black rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-black/5 dark:border-white/5 overflow-hidden">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-black/5 overflow-hidden">
               <img src={CONTACT_INFO.logo} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             </div>
-            <h3 className="text-xl font-display font-bold text-black dark:text-white">Layanan 24/7</h3>
-            <p className="text-sm text-black dark:text-white">ESA dan tim admin kami siap membantu kendala belanja Anda kapan saja.</p>
+            <h3 className="text-xl font-display font-bold text-black">Layanan 24/7</h3>
+            <p className="text-sm text-black">ESA dan tim admin kami siap membantu kendala belanja Anda kapan saja.</p>
           </div>
         </div>
       </section>

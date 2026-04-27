@@ -63,17 +63,17 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen pt-28 pb-12 px-4 flex items-center justify-center bg-bg-light dark:bg-black">
+    <div className="min-h-screen pt-28 pb-12 px-4 flex items-center justify-center bg-bg-light">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 shadow-2xl border border-black/5 dark:border-white/5"
+        className="w-full max-w-md bg-white rounded-3xl p-8 shadow-2xl border border-black/5"
       >
         <div className="text-center space-y-2 mb-8">
-          <h1 className="text-3xl font-display font-bold tracking-tighter text-black dark:text-white">
+          <h1 className="text-3xl font-display font-bold tracking-tighter text-black">
             {isLogin ? 'Selamat Datang' : 'Buat Akun Baru'}
           </h1>
-          <p className="text-sm text-black dark:text-white">
+          <p className="text-sm text-black">
             {isLogin ? 'Masuk ke akun ESTEHANGET kamu' : 'Mulai belanja produk impianmu'}
           </p>
         </div>
@@ -85,14 +85,14 @@ export default function Login() {
             </div>
           )}
           <div className="space-y-1">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40 ml-1">Email</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40 ml-1">Email</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40" size={18} />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40" size={18} />
               <input
                 type="email"
                 required
                 placeholder="email@contoh.com"
-                className="w-full bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black dark:text-white"
+                className="w-full bg-white border border-black/5 rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -100,14 +100,14 @@ export default function Login() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40 ml-1">Password</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40 ml-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40" size={18} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-black/40" size={18} />
               <input
                 type="password"
                 required
                 placeholder="••••••••"
-                className="w-full bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black dark:text-white"
+                className="w-full bg-white border border-black/5 rounded-2xl pl-12 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -135,10 +135,10 @@ export default function Login() {
 
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-black/10 dark:border-white/10"></div>
+            <div className="w-full border-t border-black/10"></div>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white dark:bg-[#1a1a1a] px-4 text-black/40 dark:text-white/40 font-bold">Atau masuk dengan</span>
+            <span className="bg-white px-4 text-black/40 font-bold">Atau masuk dengan</span>
           </div>
         </div>
 
@@ -146,16 +146,16 @@ export default function Login() {
           <button 
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="flex items-center justify-center gap-2 p-3 rounded-2xl border border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm font-bold text-black dark:text-white disabled:opacity-50"
+            className="flex items-center justify-center gap-2 p-3 rounded-2xl border border-black/5 hover:bg-black/5 transition-colors text-sm font-bold text-black disabled:opacity-50"
           >
             <Chrome size={18} /> Google
           </button>
-          <button className="flex items-center justify-center gap-2 p-3 rounded-2xl border border-black/5 dark:border-white/5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm font-bold text-black dark:text-white opacity-50 cursor-not-allowed">
+          <button className="flex items-center justify-center gap-2 p-3 rounded-2xl border border-black/5 hover:bg-black/5 transition-colors text-sm font-bold text-black opacity-50 cursor-not-allowed">
             <Github size={18} /> GitHub
           </button>
         </div>
 
-        <p className="text-center text-sm text-black/60 dark:text-white/60 mt-8">
+        <p className="text-center text-sm text-black/60 mt-8">
           {isLogin ? 'Belum punya akun?' : 'Sudah punya akun?'} {' '}
           <button 
             onClick={() => setIsLogin(!isLogin)}

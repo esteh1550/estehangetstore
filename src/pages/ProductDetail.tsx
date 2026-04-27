@@ -180,7 +180,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       />
       <button 
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors mb-8 font-bold text-outline"
+        className="flex items-center gap-2 text-black/60 hover:text-black transition-colors mb-8 font-bold text-outline"
       >
         <ArrowLeft size={20} /> Kembali
       </button>
@@ -188,7 +188,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       <div className="flex flex-col lg:flex-row gap-12">
         {/* Images */}
         <div className="lg:w-1/2 space-y-4">
-          <div className="aspect-square rounded-3xl overflow-hidden bg-white dark:bg-white/5 border border-black/5 dark:border-white/5 flex items-center justify-center p-8 shadow-xl">
+          <div className="aspect-square rounded-3xl overflow-hidden bg-white border border-black/5 flex items-center justify-center p-8 shadow-xl">
             <AnimatePresence mode="wait">
               <motion.img
                 key={activeImage}
@@ -210,7 +210,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   onClick={() => setActiveImage(i)}
                   className={cn(
                     "w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 shadow-sm",
-                    activeImage === i ? "border-black dark:border-white scale-105" : "border-transparent opacity-50 hover:opacity-100"
+                    activeImage === i ? "border-black scale-105" : "border-transparent opacity-50 hover:opacity-100"
                   )}
                 >
                   <img src={img} alt={`${product.name} ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -242,14 +242,14 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     </span>
                   )}
                 </div>
-                <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter text-black dark:text-white text-outline">
+                <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter text-black text-outline">
                   {product.name}
                 </h1>
                 <div className="flex items-center gap-6">
-                  <p className="text-3xl font-bold text-black dark:text-white text-outline">
+                  <p className="text-3xl font-bold text-black text-outline">
                     {formatPrice(product.price)}
                   </p>
-                  <div className="flex items-center gap-1 text-black/40 dark:text-white/40 text-xs font-bold uppercase tracking-widest">
+                  <div className="flex items-center gap-1 text-black/40 text-xs font-bold uppercase tracking-widest">
                     <Eye size={14} />
                     <span>{product.views || 0} Dilihat</span>
                   </div>
@@ -260,24 +260,24 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 <button onClick={() => handleShare('wa')} className="p-3 bg-[#25D366] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><MessageCircle size={18} /></button>
                 <button onClick={() => handleShare('fb')} className="p-3 bg-[#1877F2] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><Facebook size={18} /></button>
                 <button onClick={() => handleShare('tw')} className="p-3 bg-[#1DA1F2] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><Twitter size={18} /></button>
-                <button onClick={() => handleShare('copy')} className="p-3 bg-black dark:bg-white text-white dark:text-black rounded-xl hover:scale-110 transition-transform shadow-lg"><LinkIcon size={18} /></button>
+                <button onClick={() => handleShare('copy')} className="p-3 bg-black text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><LinkIcon size={18} /></button>
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-bold text-sm uppercase tracking-widest text-black/40 dark:text-white/40 text-outline">Deskripsi</h4>
-                <p className="text-lg text-black/70 dark:text-white/70 leading-relaxed text-outline">
+                <h4 className="font-bold text-sm uppercase tracking-widest text-black/40 text-outline">Deskripsi</h4>
+                <p className="text-lg text-black/70 leading-relaxed text-outline">
                   {product.description}
                 </p>
               </div>
 
               <div className="space-y-4">
-                <h4 className="font-bold text-sm uppercase tracking-widest text-black/40 dark:text-white/40 text-outline">Spesifikasi</h4>
+                <h4 className="font-bold text-sm uppercase tracking-widest text-black/40 text-outline">Spesifikasi</h4>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {(Array.isArray(product.specifications) 
                     ? product.specifications 
                     : (typeof product.specifications === 'string' ? (product.specifications as string).split('\n').filter(s => s.trim()) : [])
                   ).map((spec, i) => (
-                    <li key={i} className="flex items-center gap-3 text-black/80 dark:text-white/80 text-outline">
+                    <li key={i} className="flex items-center gap-3 text-black/80 text-outline">
                       <CheckCircle2 size={20} className="text-tea-main" />
                       {spec}
                     </li>
@@ -294,7 +294,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 </button>
                 <button
                   onClick={() => setShowCheckoutForm(true)}
-                  className="flex-1 bg-black dark:bg-white text-white dark:text-black py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-lg shadow-black/20"
+                  className="flex-1 bg-black text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-lg shadow-black/20"
                 >
                   <MessageCircle size={24} /> Beli Sekarang
                 </button>
@@ -305,18 +305,18 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onSubmit={handleConfirmPurchase} 
-              className="space-y-8 bg-white dark:bg-white/5 p-8 rounded-3xl border border-black/5 dark:border-white/5 shadow-xl"
+              className="space-y-8 bg-white p-8 rounded-3xl border border-black/5 shadow-xl"
             >
               <div className="space-y-2">
                 <button 
                   type="button"
                   onClick={() => setShowCheckoutForm(false)}
-                  className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors text-outline"
+                  className="text-xs font-bold uppercase tracking-widest text-black/40 hover:text-black transition-colors text-outline"
                 >
                   ← Kembali ke Detail
                 </button>
-                <h2 className="text-3xl font-display font-bold tracking-tighter text-black dark:text-white text-outline">Data Pengiriman</h2>
-                <p className="text-black/60 dark:text-white/60 text-outline">Lengkapi data berikut untuk melanjutkan ke WhatsApp.</p>
+                <h2 className="text-3xl font-display font-bold tracking-tighter text-black text-outline">Data Pengiriman</h2>
+                <p className="text-black/60 text-outline">Lengkapi data berikut untuk melanjutkan ke WhatsApp.</p>
               </div>
 
               <div className="space-y-6">
@@ -329,7 +329,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="Masukkan nama Anda"
-                    className="w-full bg-white dark:bg-black/30 border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black dark:text-white"
+                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
                   />
                 </div>
                 <div className="space-y-2">
@@ -341,7 +341,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="Contoh: 0812..."
-                    className="w-full bg-white dark:bg-black/30 border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black dark:text-white"
+                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
                   />
                 </div>
                 <div className="space-y-2">
@@ -352,7 +352,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     value={formData.address}
                     onChange={handleInputChange}
                     placeholder="Contoh: Jl. Melati No. 123, Jakarta"
-                    className="w-full bg-white dark:bg-black/30 border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all min-h-[120px] text-black dark:text-white"
+                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all min-h-[120px] text-black"
                   />
                 </div>
                 <div className="space-y-2">
@@ -361,7 +361,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     name="courier"
                     value={formData.courier}
                     onChange={handleInputChange}
-                    className="w-full bg-white dark:bg-black/30 border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black dark:text-white"
+                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
                   >
                     <option value="JNE">JNE</option>
                     <option value="J&T">J&T</option>
@@ -374,7 +374,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-black dark:bg-white text-white dark:text-black py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-black text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? <Loader2 className="animate-spin" size={24} /> : <MessageCircle size={24} />}
                 {isSubmitting ? 'Memproses...' : 'Konfirmasi & Chat Admin'}
@@ -389,8 +389,8 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
         <div className="mt-32 space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div className="space-y-2">
-              <h2 className="text-4xl font-display font-bold tracking-tighter text-black dark:text-white uppercase italic text-outline">Produk Terkait</h2>
-              <p className="text-black/60 dark:text-white/60 font-medium">Berdasarkan kategori "{product.category}" yang Anda lihat.</p>
+              <h2 className="text-4xl font-display font-bold tracking-tighter text-black uppercase italic text-outline">Produk Terkait</h2>
+              <p className="text-black/60 font-medium">Berdasarkan kategori "{product.category}" yang Anda lihat.</p>
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -403,16 +403,16 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
 
       {/* Reviews Section */}
       <div className="mt-20 space-y-12">
-        <div className="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-8">
+        <div className="flex items-center justify-between border-b border-black/5 pb-8">
           <div className="space-y-1">
-            <h2 className="text-3xl font-display font-bold tracking-tighter text-black dark:text-white uppercase italic text-outline">Ulasan Pembeli</h2>
+            <h2 className="text-3xl font-display font-bold tracking-tighter text-black uppercase italic text-outline">Ulasan Pembeli</h2>
             <div className="flex items-center gap-2">
               <div className="flex items-center text-yellow-500">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} size={16} fill={i < Math.round(reviews.reduce((acc, r) => acc + r.rating, 0) / (reviews.length || 1)) ? "currentColor" : "none"} />
                 ))}
               </div>
-              <span className="text-sm font-bold text-black/60 dark:text-white/60 text-outline">
+              <span className="text-sm font-bold text-black/60 text-outline">
                 {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '5.0'} / 5.0 ({reviews.length} Ulasan)
               </span>
             </div>
@@ -422,8 +422,8 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
         <div className="flex flex-col lg:flex-row gap-12">
           {/* Review Form */}
           <div className="lg:w-1/3">
-            <div className="bg-white dark:bg-white/5 p-8 rounded-3xl border border-black/5 dark:border-white/5 shadow-xl space-y-6 sticky top-32">
-              <h3 className="text-xl font-bold text-black dark:text-white text-outline">Tulis Ulasan</h3>
+            <div className="bg-white p-8 rounded-3xl border border-black/5 shadow-xl space-y-6 sticky top-32">
+              <h3 className="text-xl font-bold text-black text-outline">Tulis Ulasan</h3>
               {localStorage.getItem('user_session') ? (
                 <form onSubmit={handleAddReview} className="space-y-4">
                   <div className="space-y-2">
@@ -436,7 +436,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                           onClick={() => setNewReviewRating(star)}
                           className={cn(
                             "p-1 transition-all",
-                            newReviewRating >= star ? "text-yellow-500" : "text-black/10 dark:text-white/10"
+                            newReviewRating >= star ? "text-yellow-500" : "text-black/10"
                           )}
                         >
                           <Star size={24} fill={newReviewRating >= star ? "currentColor" : "none"} />
@@ -451,7 +451,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                       value={newReviewComment}
                       onChange={(e) => setNewReviewComment(e.target.value)}
                       placeholder="Bagikan pengalaman belanja Anda..."
-                      className="w-full bg-white dark:bg-black/30 border border-black/10 dark:border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all min-h-[120px] text-sm text-black dark:text-white"
+                      className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all min-h-[120px] text-sm text-black"
                     />
                   </div>
                   <div className="space-y-2">
@@ -464,7 +464,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                         const files = Array.from(e.target.files || []);
                         setNewReviewImages(files);
                       }}
-                      className="w-full text-xs text-black/60 dark:text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-tea-main/10 file:text-tea-main hover:file:bg-tea-main/20"
+                      className="w-full text-xs text-black/60 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-tea-main/10 file:text-tea-main hover:file:bg-tea-main/20"
                     />
                   </div>
                   <button
@@ -478,7 +478,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 </form>
               ) : (
                 <div className="text-center space-y-4 py-8">
-                  <p className="text-sm text-black/60 dark:text-white/60">Silakan login untuk memberikan ulasan produk.</p>
+                  <p className="text-sm text-black/60">Silakan login untuk memberikan ulasan produk.</p>
                   <button onClick={() => navigate('/login')} className="bg-tea-main text-white px-6 py-2 rounded-xl text-sm font-bold">Login</button>
                 </div>
               )}
@@ -493,7 +493,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   key={review.id}
-                  className="bg-white dark:bg-black p-6 rounded-3xl border border-black/5 dark:border-white/5 shadow-sm space-y-4"
+                  className="bg-white p-6 rounded-3xl border border-black/5 shadow-sm space-y-4"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -501,8 +501,8 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                         {review.userName[0].toUpperCase()}
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-black dark:text-white">{review.userName}</h4>
-                        <p className="text-[10px] text-black/40 dark:text-white/40 uppercase font-bold">Terverifikasi</p>
+                        <h4 className="font-bold text-sm text-black">{review.userName}</h4>
+                        <p className="text-[10px] text-black/40 uppercase font-bold">Terverifikasi</p>
                       </div>
                     </div>
                     <div className="flex items-center text-yellow-500">
@@ -511,19 +511,19 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                       ))}
                     </div>
                   </div>
-                  <p className="text-sm text-black/80 dark:text-white/80 leading-relaxed italic">
+                  <p className="text-sm text-black/80 leading-relaxed italic">
                     "{review.comment}"
                   </p>
                   {review.images && review.images.length > 0 && (
                     <div className="flex gap-2 pt-2">
                       {review.images.map((img, i) => (
-                        <div key={i} className="w-16 h-16 rounded-xl overflow-hidden border border-black/5 dark:border-white/5 shadow-sm">
+                        <div key={i} className="w-16 h-16 rounded-xl overflow-hidden border border-black/5 shadow-sm">
                           <img src={img} alt="Review" className="w-full h-full object-cover" />
                         </div>
                       ))}
                     </div>
                   )}
-                  <p className="text-[10px] text-black/30 dark:text-white/30 uppercase font-bold tracking-widest">
+                  <p className="text-[10px] text-black/30 uppercase font-bold tracking-widest">
                     {review.createdAt?.seconds ? new Date(review.createdAt.seconds * 1000).toLocaleDateString() : 'Baru saja'}
                   </p>
                 </motion.div>

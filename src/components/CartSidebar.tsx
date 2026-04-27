@@ -81,45 +81,45 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-bone dark:bg-[#1a1a1a] z-[101] shadow-2xl flex flex-col"
+            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-bone z-[101] shadow-2xl flex flex-col"
           >
-            <div className="p-6 flex items-center justify-between border-b border-black/10 dark:border-white/10">
+            <div className="p-6 flex items-center justify-between border-b border-black/10">
               <div className="flex items-center gap-2">
-                <ShoppingBag className="text-black dark:text-white" />
-                <h2 className="text-xl font-display font-bold text-black dark:text-white">Keranjang</h2>
+                <ShoppingBag className="text-black" />
+                <h2 className="text-xl font-display font-bold text-black">Keranjang</h2>
               </div>
-              <button onClick={onClose} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-black dark:text-white">
+              <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors text-black">
                 <X size={20} />
               </button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 text-black dark:text-white">
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-50 text-black">
                   <ShoppingBag size={64} />
                   <p className="font-medium">Keranjang masih kosong nih Kak.</p>
-                  <button onClick={onClose} className="text-black dark:text-white font-bold underline">Mulai Belanja</button>
+                  <button onClick={onClose} className="text-black font-bold underline">Mulai Belanja</button>
                 </div>
               ) : (
                 <>
                   <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Daftar Produk</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40">Daftar Produk</h3>
                     {items.map((item) => (
-                      <div key={item.id} className="flex gap-4 bg-white dark:bg-black p-3 rounded-2xl shadow-sm border border-black/5 dark:border-white/5">
+                      <div key={item.id} className="flex gap-4 bg-white p-3 rounded-2xl shadow-sm border border-black/5">
                         <img src={item.images[0]} alt={item.name} className="w-20 h-20 object-cover rounded-xl" referrerPolicy="no-referrer" />
                         <div className="flex-1 space-y-2">
                           <div className="flex justify-between items-start">
-                            <h3 className="font-bold text-sm leading-tight text-black dark:text-white">{item.name}</h3>
+                            <h3 className="font-bold text-sm leading-tight text-black">{item.name}</h3>
                             <button onClick={() => onRemove(item.id)} className="text-red-400 hover:text-red-600">
                               <Trash2 size={16} />
                             </button>
                           </div>
-                          <p className="text-xs font-bold text-black/60 dark:text-white/60">{formatPrice(item.price)}</p>
+                          <p className="text-xs font-bold text-black/60">{formatPrice(item.price)}</p>
                           <div className="flex items-center gap-3">
-                            <div className="flex items-center border border-black/10 dark:border-white/10 rounded-lg overflow-hidden">
-                              <button onClick={() => onUpdateQuantity(item.id, -1)} className="p-1 hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white"><Minus size={14} /></button>
-                              <span className="px-3 text-xs font-bold text-black dark:text-white">{item.quantity}</span>
-                              <button onClick={() => onUpdateQuantity(item.id, 1)} className="p-1 hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white"><Plus size={14} /></button>
+                            <div className="flex items-center border border-black/10 rounded-lg overflow-hidden">
+                              <button onClick={() => onUpdateQuantity(item.id, -1)} className="p-1 hover:bg-black/5 text-black"><Minus size={14} /></button>
+                              <span className="px-3 text-xs font-bold text-black">{item.quantity}</span>
+                              <button onClick={() => onUpdateQuantity(item.id, 1)} className="p-1 hover:bg-black/5 text-black"><Plus size={14} /></button>
                             </div>
                           </div>
                         </div>
@@ -128,26 +128,26 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Data Pengiriman</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40">Data Pengiriman</h3>
                     <div className="space-y-3">
                       <input 
                         type="text" 
                         placeholder="Nama Lengkap" 
-                        className="w-full bg-white dark:bg-black border border-black/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
+                        className="w-full bg-white border border-black/5 rounded-xl px-4 py-3 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                       />
                       <input 
                         type="tel" 
                         placeholder="Nomor WhatsApp (Aktif)" 
-                        className="w-full bg-white dark:bg-black border border-black/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
+                        className="w-full bg-white border border-black/5 rounded-xl px-4 py-3 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
                       />
                       <textarea 
                         placeholder="Alamat Lengkap" 
                         rows={3}
-                        className="w-full bg-white dark:bg-black border border-black/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
+                        className="w-full bg-white border border-black/5 rounded-xl px-4 py-3 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                       />
@@ -155,10 +155,10 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Estimasi Ongkir</h3>
-                    <div className="p-4 bg-sky-blue/5 dark:bg-sky-blue/10 rounded-2xl border border-sky-blue/10 space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40">Estimasi Ongkir</h3>
+                    <div className="p-4 bg-sky-blue/5 rounded-2xl border border-sky-blue/10 space-y-4">
                       <select 
-                        className="w-full bg-transparent border-b border-black/10 dark:border-white/10 py-2 text-sm text-black dark:text-white focus:outline-none"
+                        className="w-full bg-transparent border-b border-black/10 py-2 text-sm text-black focus:outline-none"
                         onChange={(e) => {
                           const val = e.target.value;
                           const costs: Record<string, number> = { 'Jkt': 10000, 'Bdg': 15000, 'Sby': 20000, 'Mdn': 30000 };
@@ -181,7 +181,7 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40 dark:text-white/40">Metode Pembayaran</h3>
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-black/40">Metode Pembayaran</h3>
                     <div className="grid grid-cols-1 gap-2">
                       {PAYMENT_METHODS.map((method) => (
                         <button
@@ -191,22 +191,22 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                             "flex items-center gap-4 p-4 rounded-2xl border transition-all text-left",
                             selectedPayment === method.id
                               ? "bg-sky-blue/10 border-sky-blue shadow-sm"
-                              : "bg-white dark:bg-black border-black/5 dark:border-white/5 hover:border-black/20 dark:hover:border-white/20"
+                              : "bg-white border-black/5 hover:border-black/20"
                           )}
                         >
                           <div className={cn(
                             "w-10 h-10 rounded-xl flex items-center justify-center",
-                            selectedPayment === method.id ? "bg-tea-main text-white" : "bg-bone dark:bg-white/5 text-black/60 dark:text-white/60"
+                            selectedPayment === method.id ? "bg-tea-main text-white" : "bg-bone text-black/60"
                           )}>
                             {method.icon}
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-bold text-black dark:text-white">{method.name}</p>
-                            <p className="text-[10px] text-black/40 dark:text-white/40">{method.desc}</p>
+                            <p className="text-sm font-bold text-black">{method.name}</p>
+                            <p className="text-[10px] text-black/40">{method.desc}</p>
                           </div>
                           <div className={cn(
                             "w-5 h-5 rounded-full border-2 flex items-center justify-center",
-                            selectedPayment === method.id ? "border-tea-main" : "border-black/10 dark:border-white/10"
+                            selectedPayment === method.id ? "border-tea-main" : "border-black/10"
                           )}>
                             {selectedPayment === method.id && <div className="w-2.5 h-2.5 bg-tea-main rounded-full" />}
                           </div>
@@ -219,21 +219,21 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
             </div>
 
             {items.length > 0 && (
-              <div className="p-6 bg-white dark:bg-black border-t border-black/10 dark:border-white/10 space-y-4">
+              <div className="p-6 bg-white border-t border-black/10 space-y-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center text-sm text-black/60 dark:text-white/60">
+                  <div className="flex justify-between items-center text-sm text-black/60">
                     <span>Subtotal</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   {shippingCost > 0 && (
-                    <div className="flex justify-between items-center text-sm text-black/60 dark:text-white/60">
+                    <div className="flex justify-between items-center text-sm text-black/60">
                       <span>Ongkos Kirim</span>
                       <span>{formatPrice(shippingCost)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center pt-2 border-t border-black/5 dark:border-white/5">
-                    <span className="font-bold text-black dark:text-white">Total</span>
-                    <span className="text-xl font-display font-bold text-black dark:text-white">{formatPrice(total)}</span>
+                  <div className="flex justify-between items-center pt-2 border-t border-black/5">
+                    <span className="font-bold text-black">Total</span>
+                    <span className="text-xl font-display font-bold text-black">{formatPrice(total)}</span>
                   </div>
                 </div>
                 <button
