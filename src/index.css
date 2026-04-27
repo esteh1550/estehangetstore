@@ -25,13 +25,13 @@
     @apply bg-bg-light text-black font-sans antialiased;
   }
 
-  /* Set default font color to black for all content elements and force it */
-  h1, h2, h3, h4, h5, h6, p, label, span, a, div {
-    @apply text-black!;
+  /* Set default font color to black for all content elements */
+  h1, h2, h3, h4, h5, h6, p, label {
+    @apply text-black;
   }
 
   /* Force background to be white for light/white feel */
-  body {
+  body, #root {
     @apply bg-white text-black;
   }
 

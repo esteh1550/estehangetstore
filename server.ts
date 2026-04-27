@@ -16,6 +16,49 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Diagnostic log for environment variables (keys only)
+  console.log("Check API Key candidacy:");
+  console.log("- process.env.GEMINI_API_KEY:", !!process.env.GEMINI_API_KEY);
+  console.log("- process.env.GOOGLE_API_KEY:", !!process.env.GOOGLE_API_KEY);
+  console.log("- process.env.VITE_GEMINI_API_KEY:", !!process.env.VITE_GEMINI_API_KEY);
+  console.log("- process.env.API_KEY:", !!process.env.API_KEY);
+
+  function getApiKey() {
+    const keys = {
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY?.trim(),
+      GOOGLE_API_KEY: process.env.GOOGLE_API_KEY?.trim(),
+      VITE_GEMINI_API_KEY: process.env.VITE_GEMINI_API_KEY?.trim(),
+      API_KEY: process.env.API_KEY?.trim()
+    };
+
+    // Filter out placeholders and empty values
+    const entries = Object.entries(keys).filter(([_, val]) => val && val !== "" && val !== "MY_GEMINI_API_KEY" && val !== "undefined");
+    
+    if (entries.length > 0) {
+      // Use the first valid one
+      return entries[0][1] as string;
+    }
+
+    // If we only found placeholders, report specifically which ones
+    const foundPlaceholders = Object.entries(keys).filter(([_, val]) => val === "MY_GEMINI_API_KEY" || val === "undefined");
+    if (foundPlaceholders.length > 0) {
+      throw new Error(`API Key placeholder ditemukan pada: ${foundPlaceholders.map(p => p[0]).join(', ')}. Silakan ganti dengan key asli di panel Secrets.`);
+    }
+
+    throw new Error("API Key tidak ditemukan. Pastikan GEMINI_API_KEY sudah diisi di panel Secrets dan tidak menggunakan nilai 'MY_GEMINI_API_KEY'.");
+  }
+
+  function formatError(error: any): string {
+    const errorString = error?.message || String(error);
+    if (errorString.includes("API_KEY_HTTP_REFERRER_BLOCKED")) {
+      return "KESALAHAN SETTING API KEY: API Key Anda memiliki batasan 'HTTP Referrer'. Harap hapus batasan tersebut di Cloud Console agar server bisa mengakses AI.";
+    }
+    if (errorString.includes("429") || errorString.toLowerCase().includes("quota")) {
+      return "Batas pemakaian AI (Quota) telah habis. Silakan coba lagi nanti.";
+    }
+    return errorString;
+  }
+
   // AI Logic for Product Extraction
   app.post("/api/extract-product", async (req, res) => {
     const { url } = req.body;
@@ -24,11 +67,7 @@ async function startServer() {
     }
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY_MISSING");
-      }
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: getApiKey() });
       
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -57,7 +96,7 @@ async function startServer() {
       res.json(product);
     } catch (error: any) {
       console.error("Extraction error:", error);
-      res.status(500).json({ error: error.message || "Gagal mengekstrak data produk" });
+      res.status(500).json({ error: formatError(error) });
     }
   });
 
@@ -66,12 +105,8 @@ async function startServer() {
     const { messages, systemInstruction } = req.body;
     
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY_MISSING");
-      }
-      const ai = new GoogleGenAI({ apiKey });
-
+      const ai = new GoogleGenAI({ apiKey: getApiKey() });
+      
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: messages.map((m: any) => ({
@@ -87,7 +122,7 @@ async function startServer() {
       res.json({ text: response.text });
     } catch (error: any) {
       console.error("Chat error:", error);
-      res.status(500).json({ error: error.message || "Terjadi kesalahan pada AI" });
+      res.status(500).json({ error: formatError(error) });
     }
   });
 

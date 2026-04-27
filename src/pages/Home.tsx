@@ -214,7 +214,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                       <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-br-lg z-10 animate-pulse">
                         -30%
                       </div>
-                      <div className="absolute bottom-2 left-2 right-2 bg-red-600/90 backdrop-blur-sm text-white text-[8px] font-bold py-1 px-2 rounded-lg text-center uppercase tracking-tighter z-10">
+                      <div className="absolute bottom-2 left-2 right-2 bg-red-600/90 backdrop-blur-sm text-white text-[8px] font-bold py-1 px-2 rounded-lg text-center uppercase tracking-tighter z-10 shadow-sm">
                         Flash Sale
                       </div>
                     </div>
@@ -224,10 +224,10 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                         <p className="text-[10px] text-black/40 dark:text-white/40 line-through">{formatPrice(product.price / 0.7)}</p>
                       </div>
                       <div className="space-y-1 pt-1">
-                        <div className="w-full h-2 bg-black/5 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="w-full h-2 bg-black/10 dark:bg-white/20 rounded-full overflow-hidden">
                           <div className="h-full bg-red-600 w-3/4" />
                         </div>
-                        <p className="text-[8px] md:text-[10px] font-bold text-black dark:text-white uppercase">75% Terjual</p>
+                        <p className="text-[8px] md:text-[10px] font-bold text-black/80 dark:text-white/90 uppercase">75% Terjual</p>
                       </div>
                     </div>
                   </div>

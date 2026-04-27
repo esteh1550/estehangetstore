@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartSidebar from './components/CartSidebar';
-import Chatbot from './components/Chatbot';
+// import Chatbot from './components/Chatbot';
 import Home from './pages/Home';
 import About from './pages/About';
 import Contact from './pages/Contact';
@@ -152,7 +152,7 @@ export default function App() {
           onRemove={removeFromCart}
         />
 
-        <Chatbot />
+        {/* <Chatbot /> */}
       </div>
     </Router>
   );
