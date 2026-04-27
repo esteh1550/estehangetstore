@@ -65,10 +65,10 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
     <>
       <div className="fixed top-0 left-0 right-0 z-[60] bg-sky-blue text-black py-1 overflow-hidden">
         <div className="flex whitespace-nowrap animate-ticker">
-          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">✨ PROMO RAMADAN: DISKON HINGGA 50% UNTUK SEMUA PRODUK DIGITAL ✨</span>
-          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">💎 PRODUK TERBARU: SMARTWATCH SERIES S SUDAH TERSEDIA 💎</span>
-          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">✨ PROMO RAMADAN: DISKON HINGGA 50% UNTUK SEMUA PRODUK DIGITAL ✨</span>
-          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">💎 PRODUK TERBARU: SMARTWATCH SERIES S SUDAH TERSEDIA 💎</span>
+          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">✨ WELLCOME TO ESTEHANGET STORE DIMANA KALIAN BISA MENEMUKAN HAL MENARIK DISINI ✨</span>
+          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">💎 SIAP PASARKAN PRODUK ANDA DI WEBSITE KAMI SEKARANG! 💎</span>
+          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">✨ WELLCOME TO ESTEHANGET STORE DIMANA KALIAN BISA MENEMUKAN HAL MENARIK DISINI ✨</span>
+          <span className="mx-4 text-[10px] font-bold uppercase tracking-widest">💎 SIAP PASARKAN PRODUK ANDA DI WEBSITE KAMI SEKARANG! 💎</span>
         </div>
       </div>
       <nav className={cn(
