@@ -21,7 +21,8 @@ export const CONTACT_INFO = {
 };
 
 export const ADMIN_EMAILS: string[] = [
-  "eepsyarief20@gmail.com"
+  "eepsyarief20@gmail.com",
+  "alfae800@gmail.com"
 ];
 
 export const ADMIN_EMAIL = ADMIN_EMAILS[0];
