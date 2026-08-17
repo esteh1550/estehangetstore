@@ -27,7 +27,7 @@ import {
   Share2
 } from 'lucide-react';
 import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { 
   createStore, 
   updateStore, 
@@ -118,7 +118,7 @@ export default function Seller() {
     let unsubscribe: any;
     if (isFirebaseEnabled && auth) {
       unsubscribe = onAuthStateChanged(auth, (u) => {
-        const isAuthed = !!u && u.email === ADMIN_EMAIL;
+        const isAuthed = !!u && isAdminEmail(u?.email);
         setIsFirebaseAuthed(isAuthed);
         setAuthLoading(false);
         
@@ -221,11 +221,23 @@ export default function Seller() {
               onClick={async () => {
                 try {
                   setAuthLoading(true);
-                  await signInWithPopup(auth!, googleProvider);
+                  const result = await signInWithPopup(auth!, googleProvider);
+                  if (!isAdminEmail(result.user.email)) {
+                    await signOut(auth!);
+                    alert(`Akses Ditolak: Email Google ${result.user.email} tidak terdaftar sebagai Admin.`);
+                    setAuthLoading(false);
+                    return;
+                  }
+                  const adminSession = {
+                    email: result.user.email,
+                    displayName: result.user.displayName || 'Administrator'
+                  };
+                  localStorage.setItem('user_session', JSON.stringify(adminSession));
                   // Reload data after auth
                   window.location.reload();
-                } catch (err) {
-                  alert("Gagal sinkronisasi Cloud. Cek koneksi internet Anda.");
+                } catch (err: any) {
+                  console.error("Cloud auth error:", err);
+                  alert("Gagal sinkronisasi Cloud: " + (err?.message || "Cek koneksi internet Anda."));
                 } finally {
                   setAuthLoading(false);
                 }
@@ -787,8 +799,9 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         newId = await addProduct(productData as any);
       }
       onComplete(newId);
-    } catch (error) {
-      alert('Gagal menyimpan produk');
+    } catch (error: any) {
+      console.error("Error saving product:", error);
+      alert('Gagal menyimpan produk: ' + (error?.message || 'Terjadi kesalahan'));
     } finally {
       setLoading(false);
     }

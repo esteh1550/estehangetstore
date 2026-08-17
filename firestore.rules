@@ -17,7 +17,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return emailVerified() && request.auth.token.email == 'eepsyarief20@gmail.com';
+      return isSignedIn() && request.auth.token.email in [
+        'eepsyarief20@gmail.com',
+        'alfae800@gmail.com'
+      ];
     }
 
     function isValidId(id) {
@@ -35,17 +38,17 @@ service cloud.firestore {
     // --- Validation Helpers ---
 
     function isValidStore(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.location is string && data.location.size() <= 200 &&
-             data.description is string && data.description.size() <= 1000;
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.location is string && data.location.size() <= 300 &&
+             data.description is string && data.description.size() <= 2000;
     }
 
     function isValidProduct(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
              data.price is number && data.price >= 0 &&
-             data.category is string && data.category in ['gadget', 'pakaian', 'sepatu', 'digital'] &&
+             data.category is string &&
              data.stock is number && data.stock >= 0 &&
-             data.images is list && data.images.size() <= 10;
+             data.images is list && data.images.size() <= 30;
     }
 
     function isValidReview(data) {
@@ -61,18 +64,17 @@ service cloud.firestore {
     match /stores/{storeId} {
       allow read: if true;
       allow create: if isAdmin() && isValidStore(incoming()) && 
-                        incoming().keys().hasAll(['name', 'location', 'description']) && (incoming().keys().size() >= 3);
-      allow update: if isAdmin() && isValidStore(incoming()) &&
-                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'location', 'description', 'logo', 'updatedAt']);
+                        incoming().keys().hasAll(['name', 'location', 'description']);
+      allow update: if isAdmin() && isValidStore(incoming());
+      allow delete: if isAdmin();
     }
 
     // 2. Products
     match /products/{productId} {
       allow read: if true;
       allow create: if isAdmin() && isValidProduct(incoming()) &&
-                        incoming().keys().hasAll(['storeId', 'name', 'price', 'category']) && (incoming().keys().size() >= 4);
-      allow update: if isAdmin() && isValidProduct(incoming()) &&
-                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'price', 'category', 'stock', 'description', 'specifications', 'images', 'views', 'updatedAt']);
+                        incoming().keys().hasAll(['storeId', 'name', 'price', 'category']);
+      allow update: if isAdmin() && isValidProduct(incoming());
       allow delete: if isAdmin();
     }
 
