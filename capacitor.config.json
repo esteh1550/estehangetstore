@@ -1,0 +1,9 @@
+{
+  "appId": "com.estehanget.app",
+  "appName": "ESTEHANGET",
+  "webDir": "dist",
+  "server": {
+    "url": "https://ais-pre-psu5hzueipibaar3vwmcf4-294921380831.asia-east1.run.app",
+    "cleartext": true
+  }
+}
