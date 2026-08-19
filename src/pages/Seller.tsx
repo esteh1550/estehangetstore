@@ -46,6 +46,8 @@ import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
 
 import { SHOE_BRANDS, SHOE_MODELS } from '../constants/shoeCategories';
 import { generateShoeDetails } from '../utils/shoeAutoGenerator';
+import { isLuxuryProduct, LUXURY_PRICE_THRESHOLD } from '../lib/luxury';
+import { Crown } from 'lucide-react';
 
 export default function Seller() {
   const [store, setStore] = React.useState<Store | null>(null);
@@ -517,6 +519,7 @@ function StatCard({ title, value, icon }: { title: string, value: string | numbe
 }
 
 function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: () => void, onDelete: () => void }) {
+  const isLuxury = isLuxuryProduct(product);
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}/product/${product.id}`;
@@ -533,10 +536,21 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden group shadow-sm">
+    <div className={cn(
+      "bg-white rounded-3xl border overflow-hidden group shadow-sm transition-all",
+      isLuxury ? "border-[#D4AF37]/60 shadow-[0_4px_15px_rgba(212,175,55,0.15)]" : "border-black/5"
+    )}>
       <div className="aspect-video relative overflow-hidden">
         <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-        <div className="absolute top-4 right-4 flex gap-2">
+        
+        {isLuxury && (
+          <div className="absolute top-4 left-4 z-10 bg-gradient-to-r from-[#141210] to-[#2B2620] text-[#D4AF37] border border-[#D4AF37]/50 text-[9px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-md">
+            <Crown size={11} className="text-[#D4AF37]" />
+            <span>MEWAH (VIP)</span>
+          </div>
+        )}
+
+        <div className="absolute top-4 right-4 flex gap-2 z-10">
           <button 
             title="Bagikan Link Produk"
             onClick={handleShare} 
@@ -556,11 +570,18 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
         <Link to={`/product/${product.id}`}>
           <h4 className="font-bold text-black truncate hover:text-tea-main transition-colors">{product.name}</h4>
         </Link>
-        <p className="text-tea-main font-bold">{formatPrice(product.price)}</p>
-        <div className="flex items-center gap-2">
+        <p className={cn("font-bold", isLuxury ? "text-[#9E2E0B]" : "text-tea-main")}>
+          {formatPrice(product.price)}
+        </p>
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 px-2 py-1 rounded-lg text-black/40">
             {product.category}
           </span>
+          {isLuxury && (
+            <span className="text-[9px] font-black uppercase text-[#8A6A12] bg-[#D4AF37]/15 px-2 py-0.5 rounded-md border border-[#D4AF37]/30">
+              VIP Treatment
+            </span>
+          )}
           <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 uppercase tracking-widest">
             <Eye size={10} />
             <span>{product.views || 0} views</span>
@@ -869,7 +890,14 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Harga (Rp)</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-widest text-black/40">Harga (Rp)</label>
+              {formData.price >= LUXURY_PRICE_THRESHOLD && (
+                <span className="text-[11px] font-black text-[#D4AF37] bg-[#141210] px-2.5 py-0.5 rounded-md border border-[#D4AF37]/50 flex items-center gap-1">
+                  <Crown size={12} /> TIER PRODUK MEWAH (VIP)
+                </span>
+              )}
+            </div>
             <div className="relative">
               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
               <input
@@ -880,6 +908,14 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
                 onChange={e => setFormData({ ...formData, price: Number(e.target.value) })}
               />
             </div>
+            {formData.price >= LUXURY_PRICE_THRESHOLD && (
+              <p className="text-[11px] font-semibold text-[#8A6A12] bg-[#D4AF37]/10 p-2.5 rounded-xl border border-[#D4AF37]/30 flex items-start gap-2">
+                <Crown size={14} className="shrink-0 mt-0.5 text-[#D4AF37]" />
+                <span>
+                  <strong>Perlakuan Khusus Aktif:</strong> Produk di atas Rp 500.000 otomatis mendapatkan <strong>Badge Emas VIP</strong>, <strong>Kemasan Hardbox Ganda</strong>, <strong>Garansi Sertifikat Keaslian</strong>, <strong>Asuransi Penuh</strong>, dan <strong>Layanan QC Video Personal</strong>.
+                </span>
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

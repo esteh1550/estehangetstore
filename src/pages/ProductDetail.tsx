@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, Eye, X } from 'lucide-react';
+import { ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, Eye, X, Crown } from 'lucide-react';
 import { saveOrder } from '../lib/storage';
 import { PRODUCTS, CONTACT_INFO } from '../constants';
 import { formatPrice, cn } from '../lib/utils';
@@ -11,6 +11,7 @@ import { getProduct, addReview, getReviewsByProduct, recordOrder, incrementProdu
 import { useProductHistory } from '../lib/useProductHistory';
 import ProductCard from '../components/ProductCard';
 import { useToast } from '../components/Toast';
+import { isLuxuryProduct } from '../lib/luxury';
 
 interface ProductDetailProps {
   onAddToCart: (p: Product) => void;
@@ -34,6 +35,8 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
     address: '',
     courier: 'JNE'
   });
+
+  const isLuxury = isLuxuryProduct(product);
 
   const [reviews, setReviews] = React.useState<Review[]>([]);
   const [selectedSize, setSelectedSize] = React.useState<string>('');
@@ -140,8 +143,10 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       const savedUser = localStorage.getItem('user_session');
       const user = savedUser ? JSON.parse(savedUser) : null;
       
+      const luxuryTag = isLuxury ? '\n👑 *[LAYANAN VIP PRODUK MEWAH AKTIF]* (Hardbox Packaging + Asuransi Penuh + Video QC)' : '';
+
       // Create a record in Firestore orders collection
-      const orderUrl = `https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(`Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*\n*Ukuran (Size):* ${selectedSize || '40'}\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nNo. HP: ${formData.phone}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`)}`;
+      const orderUrl = `https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(`Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*${luxuryTag}\n*Ukuran (Size):* ${selectedSize || '40'}\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nNo. HP: ${formData.phone}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`)}`;
       
       await recordOrder({
         userId: user?.uid || 'anonymous',
@@ -158,7 +163,8 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error saving order:', error);
-      const text = `Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`;
+      const luxuryTag = isLuxury ? '\n👑 *[LAYANAN VIP PRODUK MEWAH]*' : '';
+      const text = `Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*${luxuryTag}\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`;
       window.open(`https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(text)}`, '_blank');
       setShowCheckoutForm(false);
     } finally {
@@ -268,6 +274,12 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
             <>
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
+                  {isLuxury && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-[#141210] to-[#2B2620] text-[#D4AF37] border border-[#D4AF37]/60 rounded-full text-xs font-black uppercase tracking-widest shadow-md">
+                      <Crown size={14} className="text-[#D4AF37]" />
+                      <span>PRODUK MEWAH</span>
+                    </span>
+                  )}
                   <span className="inline-block px-3 py-1 bg-tea-main/10 text-tea-main rounded-full text-xs font-bold uppercase tracking-widest text-outline">
                     {product.category}
                   </span>
@@ -306,7 +318,10 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   {product.name}
                 </h1>
                 <div className="flex items-center gap-6">
-                  <p className={cn("text-3xl font-bold text-outline", product.stock === 0 ? "text-black/40 line-through" : "text-black")}>
+                  <p className={cn(
+                    "text-3xl font-bold text-outline", 
+                    product.stock === 0 ? "text-black/40 line-through" : (isLuxury ? "text-[#9E2E0B]" : "text-black")
+                  )}>
                     {formatPrice(product.price)}
                   </p>
                   <div className="flex items-center gap-1 text-black/40 text-xs font-bold uppercase tracking-widest">
@@ -315,6 +330,14 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Luxury Badge Tag if price > 500k */}
+              {isLuxury && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#141210] border border-[#D4AF37]/50 text-[#E5C158] text-xs font-black tracking-wider uppercase shadow-sm">
+                  <Crown size={14} className="text-[#D4AF37]" />
+                  <span>Koleksi Produk Mewah (&gt; Rp 500.000)</span>
+                </div>
+              )}
 
               <div className="flex items-center gap-3">
                 <button onClick={() => handleShare('wa')} className="p-3 bg-[#25D366] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><MessageCircle size={18} /></button>

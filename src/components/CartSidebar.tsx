@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShoppingBag, Trash2, Plus, Minus, MessageSquare, CreditCard, Wallet, Building2, QrCode, Loader2 } from 'lucide-react';
+import { X, ShoppingBag, Trash2, Plus, Minus, MessageSquare, CreditCard, Wallet, Building2, QrCode, Loader2, Crown, ShieldCheck } from 'lucide-react';
 import { CartItem } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import { CONTACT_INFO } from '../constants';
 import { saveOrder } from '../lib/storage';
 import { useToast } from './Toast';
+import { isLuxuryProduct } from '../lib/luxury';
 
 const PAYMENT_METHODS = [
   { id: 'transfer', name: 'Transfer Bank', icon: <Building2 size={18} />, desc: 'BCA, Mandiri, BNI' },
@@ -40,6 +41,7 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const total = subtotal - discountAmount + shippingCost;
+  const hasLuxuryItem = items.some(isLuxuryProduct);
 
   const handleApplyPromo = () => {
     setPromoError('');
@@ -96,9 +98,13 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
       paymentMethod: payment?.name || selectedPayment
     });
 
-    const itemsList = items.map(item => `- ${item.name} (Size: ${item.selectedSize || 'Standard'}) (${item.quantity}x)`).join('\n');
+    const itemsList = items.map(item => {
+      const isItemLux = isLuxuryProduct(item);
+      return `- ${item.name} (Size: ${item.selectedSize || 'Standard'}) (${item.quantity}x)${isItemLux ? ' 👑 [PRODUK MEWAH]' : ''}`;
+    }).join('\n');
+
     let text = `Halo Admin E STORE, saya ingin memesan:\n\n*Nama:* ${customerName}\n*No. HP:* ${customerPhone}\n*Alamat:* ${address}\n\n*Daftar Pesanan:*\n${itemsList}\n\n`;
-    
+
     if (appliedPromo) {
       text += `*Subtotal:* ${formatPrice(subtotal)}\n*Promo:* ${appliedPromo} (-${discountPercent}%)\n*Diskon:* -${formatPrice(discountAmount)}\n`;
     }
@@ -152,35 +158,64 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
               ) : (
                 <>
                   <div className="space-y-4">
+                    {/* VIP Luxury Notification */}
+                    {hasLuxuryItem && (
+                      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#181512] to-[#2B2620] border border-[#D4AF37]/50 text-white space-y-1.5 shadow-md">
+                        <div className="flex items-center gap-2 text-[#E5C158] font-bold text-xs">
+                          <Crown size={15} className="text-[#D4AF37]" />
+                          <span>Perlakuan Khusus Produk Mewah Aktif!</span>
+                        </div>
+                        <p className="text-[11px] text-[#C4B9A7] leading-relaxed">
+                          Pesanan Anda mendapatkan <strong className="text-white">Packaging Hardbox Ganda</strong>, <strong className="text-white">Asuransi Pengiriman Penuh</strong>, dan <strong className="text-white">Video QC Personal</strong> gratis.
+                        </p>
+                      </div>
+                    )}
+
                     <h3 className="text-xs font-bold uppercase tracking-widest text-black/40">Daftar Produk</h3>
-                    {items.map((item) => (
-                      <div key={item.id} className="flex gap-4 bg-white p-3 rounded-2xl shadow-sm border border-black/5">
-                        <img src={item.images[0]} alt={item.name} className="w-20 h-20 object-cover rounded-xl" referrerPolicy="no-referrer" />
-                        <div className="flex-1 space-y-2">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-bold text-sm leading-tight text-black">{item.name}</h3>
-                            <button onClick={() => onRemove(item.id)} className="text-red-400 hover:text-red-600">
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs font-bold text-black/60">{formatPrice(item.price)}</p>
-                            {item.selectedSize && (
-                              <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                Size: {item.selectedSize}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center border border-black/10 rounded-lg overflow-hidden">
-                              <button onClick={() => onUpdateQuantity(item.id, -1)} className="p-1 hover:bg-black/5 text-black"><Minus size={14} /></button>
-                              <span className="px-3 text-xs font-bold text-black">{item.quantity}</span>
-                              <button onClick={() => onUpdateQuantity(item.id, 1)} className="p-1 hover:bg-black/5 text-black"><Plus size={14} /></button>
+                    {items.map((item) => {
+                      const isItemLux = isLuxuryProduct(item);
+                      return (
+                        <div 
+                          key={item.id} 
+                          className={cn(
+                            "flex gap-4 bg-white p-3 rounded-2xl shadow-sm border",
+                            isItemLux ? "border-[#D4AF37]/50 bg-gradient-to-b from-[#FFFDF9] to-white" : "border-black/5"
+                          )}
+                        >
+                          <img src={item.images[0]} alt={item.name} className="w-20 h-20 object-cover rounded-xl shrink-0" referrerPolicy="no-referrer" />
+                          <div className="flex-1 space-y-2 min-w-0">
+                            <div className="flex justify-between items-start gap-1">
+                              <h3 className="font-bold text-sm leading-tight text-black line-clamp-1">{item.name}</h3>
+                              <button onClick={() => onRemove(item.id)} className="text-red-400 hover:text-red-600 shrink-0">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className={cn("text-xs font-bold", isItemLux ? "text-[#9E2E0B]" : "text-black/60")}>
+                                {formatPrice(item.price)}
+                              </p>
+                              {item.selectedSize && (
+                                <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                  Size: {item.selectedSize}
+                                </span>
+                              )}
+                              {isItemLux && (
+                                <span className="text-[9px] font-black bg-[#141210] text-[#D4AF37] border border-[#D4AF37]/40 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                  <Crown size={9} /> MEWAH
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center border border-black/10 rounded-lg overflow-hidden">
+                                <button onClick={() => onUpdateQuantity(item.id, -1)} className="p-1 hover:bg-black/5 text-black"><Minus size={14} /></button>
+                                <span className="px-3 text-xs font-bold text-black">{item.quantity}</span>
+                                <button onClick={() => onUpdateQuantity(item.id, 1)} className="p-1 hover:bg-black/5 text-black"><Plus size={14} /></button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="space-y-4">

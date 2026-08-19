@@ -1,10 +1,11 @@
 import React from 'react';
-import { Heart, ShoppingCart, Eye, Star, MapPin, Share2 } from 'lucide-react';
+import { Heart, ShoppingCart, Eye, Star, MapPin, Share2, Crown } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import { STORE } from '../constants';
+import { isLuxuryProduct } from '../lib/luxury';
 
 interface ProductCardProps {
   key?: React.Key;
@@ -17,6 +18,7 @@ interface ProductCardProps {
 
 const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWishlist }: ProductCardProps) => {
   const store = STORE;
+  const isLuxury = isLuxuryProduct(product);
   
   // Use product.id to generate consistent "random" values
   const rating = React.useMemo(() => {
@@ -42,11 +44,15 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
       exit={{ opacity: 0, scale: 0.95 }}
       whileHover={{ y: -4 }}
       className={cn(
-        "bg-[#FAF6F0] rounded-2xl overflow-hidden border border-[#E5DEC9] shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative p-3",
+        "bg-[#FAF6F0] rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative p-3",
+        isLuxury ? "border-[#D4AF37]/50 shadow-[0_2px_12px_rgba(212,175,55,0.12)] bg-gradient-to-b from-[#FAF7EE] to-[#FAF6F0]" : "border-[#E5DEC9]",
         isSoldOut && "opacity-85"
       )}
     >
-      <div className="relative aspect-square overflow-hidden bg-white rounded-xl border border-[#EDE4D5]">
+      <div className={cn(
+        "relative aspect-square overflow-hidden bg-white rounded-xl border",
+        isLuxury ? "border-[#D4AF37]/30" : "border-[#EDE4D5]"
+      )}>
         <img
           src={product.images[0]}
           alt={product.name}
@@ -57,6 +63,16 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
           referrerPolicy="no-referrer"
         />
         
+        {/* Luxury Badge for price > 500k */}
+        {isLuxury && (
+          <div
+            className="absolute top-2 left-2 z-10 bg-gradient-to-r from-[#141210] to-[#2B2620] text-[#D4AF37] border border-[#D4AF37]/60 text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-md tracking-wider uppercase"
+          >
+            <Crown size={11} className="text-[#D4AF37]" />
+            <span>MEWAH</span>
+          </div>
+        )}
+
         {/* SOLD Overlay Badge */}
         {isSoldOut && (
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-10 pointer-events-none">
@@ -95,11 +111,13 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
 
       <div className="pt-3 pb-1 flex flex-col flex-1 text-center justify-between space-y-2">
         <div className="space-y-1">
-          {product.brand && (
-            <p className="text-[11px] font-medium text-[#7A7163] capitalize">
-              {product.brand}
-            </p>
-          )}
+          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+            {product.brand && (
+              <p className="text-[11px] font-medium text-[#7A7163] capitalize">
+                {product.brand}
+              </p>
+            )}
+          </div>
 
           <Link to={`/product/${product.id}`} className="block">
             <h3 className={cn(
@@ -110,7 +128,10 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
             </h3>
           </Link>
           
-          <p className={cn("font-bold text-xs sm:text-sm tracking-wide pt-0.5", isSoldOut ? "text-black/40 line-through" : "text-[#B83A0E]")}>
+          <p className={cn(
+            "font-bold text-xs sm:text-sm tracking-wide pt-0.5",
+            isSoldOut ? "text-black/40 line-through" : (isLuxury ? "text-[#9E2E0B]" : "text-[#B83A0E]")
+          )}>
             {formatPrice(product.price)}
           </p>
         </div>
@@ -119,13 +140,16 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
           onClick={() => !isSoldOut && onAddToCart(product)}
           disabled={isSoldOut}
           className={cn(
-            "w-full py-2.5 rounded-lg font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 mt-2",
+            "w-full py-2.5 rounded-lg font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 mt-2 shadow-sm",
             isSoldOut
               ? "bg-red-700 text-white shadow-sm cursor-not-allowed"
-              : "bg-[#B83A0E] text-white hover:bg-[#992F0B] active:scale-[0.98] shadow-sm"
+              : isLuxury
+                ? "bg-gradient-to-r from-[#181512] to-[#362E25] text-[#E5C158] border border-[#D4AF37]/40 hover:to-[#181512] active:scale-[0.98]"
+                : "bg-[#B83A0E] text-white hover:bg-[#992F0B] active:scale-[0.98]"
           )}
         >
-          <ShoppingCart size={13} /> {isSoldOut ? 'SOLD OUT' : 'ADD TO CART'}
+          <ShoppingCart size={13} className={isLuxury ? "text-[#D4AF37]" : "text-white"} /> 
+          {isSoldOut ? 'SOLD OUT' : 'ADD TO CART'}
         </button>
       </div>
     </motion.div>

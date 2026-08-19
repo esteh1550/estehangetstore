@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, Star, ChevronDown, ChevronUp, Zap, Footprints, Eye, Package, Check, Sparkles, Ruler } from 'lucide-react';
+import { Search, Filter, Star, ChevronDown, ChevronUp, Zap, Footprints, Eye, Package, Check, Sparkles, Ruler, Crown } from 'lucide-react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
@@ -11,6 +11,7 @@ import { getAllProducts } from '../lib/sellerService';
 import { useProductHistory } from '../lib/useProductHistory';
 import { useToast } from '../components/Toast';
 import { SHOE_BRANDS, SHOE_MODELS } from '../constants/shoeCategories';
+import { isLuxuryProduct, LUXURY_PRICE_THRESHOLD } from '../lib/luxury';
 
 const ALL_SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'];
 
@@ -57,6 +58,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
   const [selectedShoeModel, setSelectedShoeModel] = React.useState<string>('all');
   const [selectedShoeType, setSelectedShoeType] = React.useState<string>('all');
   const [selectedSize, setSelectedSize] = React.useState<string>('all');
+  const [onlyLuxury, setOnlyLuxury] = React.useState(false);
 
   React.useEffect(() => {
     const q = searchParams.get('q');
@@ -66,6 +68,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     const type = searchParams.get('type');
     const sz = searchParams.get('size');
     const sort = searchParams.get('sort');
+    const lux = searchParams.get('luxury');
 
     setSearch(q !== null ? q : '');
     setCategory(cat !== null ? cat : 'all');
@@ -73,6 +76,9 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     setSelectedShoeModel(model !== null ? model : 'all');
     setSelectedShoeType(type !== null ? type : 'all');
     setSelectedSize(sz !== null ? sz : 'all');
+    if (lux === 'true') {
+      setOnlyLuxury(true);
+    }
     if (sort === 'price-low' || sort === 'price-high' || sort === 'newest') {
       setSortBy(sort);
     }
@@ -167,8 +173,9 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     const pMin = minPrice ? parseInt(minPrice) : 0;
     const pMax = maxPrice ? parseInt(maxPrice) : Infinity;
     const matchesPrice = p.price >= pMin && p.price <= pMax;
+    const matchesLuxury = !onlyLuxury || isLuxuryProduct(p);
     
-    return matchesSearch && matchesCategory && matchesBrand && matchesShoeModel && matchesShoeType && matchesSize && matchesPrice;
+    return matchesSearch && matchesCategory && matchesBrand && matchesShoeModel && matchesShoeType && matchesSize && matchesPrice && matchesLuxury;
   }).sort((a, b) => {
     // Sold out items always go to the bottom
     const aSold = (a.stock || 0) <= 0;
@@ -180,6 +187,10 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     if (sortBy === 'price-high') return b.price - a.price;
     return 0; // 'newest' is default order in constants
   });
+
+  const luxuryProducts = React.useMemo(() => {
+    return allProducts.filter(p => isLuxuryProduct(p) && (p.stock || 0) > 0);
+  }, [allProducts]);
 
   const { getRecommendedProducts, history } = useProductHistory();
 
@@ -531,6 +542,57 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
         </section>
       )}
 
+      {/* Luxury Showcase (Products > 500rb) */}
+      {!isShop && luxuryProducts.length > 0 && !search && (
+        <section className="max-w-7xl mx-auto px-4">
+          <div className="rounded-3xl bg-gradient-to-br from-[#12100E] via-[#1F1A14] to-[#2B2319] p-6 md:p-10 border border-[#D4AF37]/40 shadow-2xl text-white relative overflow-hidden">
+            {/* Background luxury accent */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 relative z-10 border-b border-white/10 pb-6">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#E5C158] text-xs font-black tracking-widest uppercase">
+                  <Crown size={14} className="text-[#D4AF37]" />
+                  <span>Koleksi Produk Mewah (&gt; Rp 500.000)</span>
+                </div>
+                <h2 className="text-2xl md:text-4xl font-display font-bold tracking-tight text-white">
+                  Koleksi Eksklusif & <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#FFF0B8]">Sepatu Pilihan</span>
+                </h2>
+                <p className="text-xs md:text-sm text-[#C4B9A7] max-w-2xl leading-relaxed">
+                  Pilihan produk sepatu mewah berkelas dengan material premium dan desain eksklusif untuk penampilan istimewa.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setOnlyLuxury(true);
+                    document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-[#E5C158] text-black font-extrabold text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#D4AF37]/20"
+                >
+                  <Crown size={15} /> Lihat Semua ({luxuryProducts.length})
+                </button>
+              </div>
+            </div>
+
+            {/* Luxury Products Horizontal / Grid Slider */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
+              {luxuryProducts.slice(0, 4).map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isWishlisted={wishlist.includes(product.id)}
+                  onAddToCart={onAddToCart}
+                  onToggleWishlist={onToggleWishlist}
+                  onViewDetails={onViewDetails}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Product Section */}
       <section id="produk-list" className="max-w-7xl mx-auto px-4 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
@@ -621,15 +683,32 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
               <button
-                onClick={() => setCategory('all')}
+                onClick={() => {
+                  setCategory('all');
+                  setOnlyLuxury(false);
+                }}
                 className={cn(
                   "px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap",
-                  category === 'all' 
+                  category === 'all' && !onlyLuxury
                     ? "bg-tea-main text-black shadow-lg shadow-tea-main/20" 
                     : "bg-white text-black hover:bg-black/5"
                 )}
               >
                 Semua Produk
+              </button>
+
+              <button
+                onClick={() => setOnlyLuxury(prev => !prev)}
+                className={cn(
+                  "px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-1.5 border",
+                  onlyLuxury 
+                    ? "bg-[#161311] text-[#E5C158] border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20" 
+                    : "bg-[#FDFBF7] text-[#8C6D1F] border-[#D4AF37]/40 hover:bg-[#F8F4EB]"
+                )}
+              >
+                <Crown size={14} className="text-[#D4AF37]" />
+                <span>Produk Mewah (&gt; 500rb)</span>
+                {onlyLuxury && <Check size={14} className="text-[#E5C158]" />}
               </button>
             </div>
           </div>
