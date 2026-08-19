@@ -7,6 +7,7 @@ import { CONTACT_INFO } from '../constants';
 import { saveOrder } from '../lib/storage';
 import { useToast } from './Toast';
 import { isLuxuryProduct } from '../lib/luxury';
+import { isSecondProduct } from '../lib/condition';
 
 const PAYMENT_METHODS = [
   { id: 'transfer', name: 'Transfer Bank', icon: <Building2 size={18} />, desc: 'BCA, Mandiri, BNI' },
@@ -41,7 +42,6 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const discountAmount = Math.round(subtotal * (discountPercent / 100));
   const total = subtotal - discountAmount + shippingCost;
-  const hasLuxuryItem = items.some(isLuxuryProduct);
 
   const handleApplyPromo = () => {
     setPromoError('');
@@ -100,7 +100,9 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
 
     const itemsList = items.map(item => {
       const isItemLux = isLuxuryProduct(item);
-      return `- ${item.name} (Size: ${item.selectedSize || 'Standard'}) (${item.quantity}x)${isItemLux ? ' 👑 [PRODUK MEWAH]' : ''}`;
+      const isItemSecond = isSecondProduct(item);
+      const condTag = isItemSecond ? '[SECOND]' : '[BARU]';
+      return `- ${item.name} ${condTag} (Size: ${item.selectedSize || 'Standard'}) (${item.quantity}x)${isItemLux ? ' 💎 [EDISI PREMIUM]' : ''}`;
     }).join('\n');
 
     let text = `Halo Admin E STORE, saya ingin memesan:\n\n*Nama:* ${customerName}\n*No. HP:* ${customerPhone}\n*Alamat:* ${address}\n\n*Daftar Pesanan:*\n${itemsList}\n\n`;
@@ -158,19 +160,6 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
               ) : (
                 <>
                   <div className="space-y-4">
-                    {/* VIP Luxury Notification */}
-                    {hasLuxuryItem && (
-                      <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#181512] to-[#2B2620] border border-[#D4AF37]/50 text-white space-y-1.5 shadow-md">
-                        <div className="flex items-center gap-2 text-[#E5C158] font-bold text-xs">
-                          <Crown size={15} className="text-[#D4AF37]" />
-                          <span>Perlakuan Khusus Produk Mewah Aktif!</span>
-                        </div>
-                        <p className="text-[11px] text-[#C4B9A7] leading-relaxed">
-                          Pesanan Anda mendapatkan <strong className="text-white">Packaging Hardbox Ganda</strong>, <strong className="text-white">Asuransi Pengiriman Penuh</strong>, dan <strong className="text-white">Video QC Personal</strong> gratis.
-                        </p>
-                      </div>
-                    )}
-
                     <h3 className="text-xs font-bold uppercase tracking-widest text-black/40">Daftar Produk</h3>
                     {items.map((item) => {
                       const isItemLux = isLuxuryProduct(item);
@@ -199,18 +188,56 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                                   Size: {item.selectedSize}
                                 </span>
                               )}
+                              <span className={cn(
+                                "text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider text-white",
+                                isSecondProduct(item) ? "bg-amber-600" : "bg-emerald-600"
+                              )}>
+                                {isSecondProduct(item) ? "Second" : "Baru"}
+                              </span>
                               {isItemLux && (
-                                <span className="text-[9px] font-black bg-[#141210] text-[#D4AF37] border border-[#D4AF37]/40 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                                  <Crown size={9} /> MEWAH
+                                <span className="text-[9px] font-black bg-gradient-to-r from-zinc-950 to-zinc-900 text-amber-300 border border-amber-400/40 px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm">
+                                  <Crown size={9} className="text-amber-400" /> PREMIUM
                                 </span>
                               )}
                             </div>
                             <div className="flex items-center gap-3">
-                              <div className="flex items-center border border-black/10 rounded-lg overflow-hidden">
-                                <button onClick={() => onUpdateQuantity(item.id, -1)} className="p-1 hover:bg-black/5 text-black"><Minus size={14} /></button>
+                              <div className="flex items-center border border-black/10 rounded-lg overflow-hidden bg-white">
+                                <button 
+                                  onClick={() => onUpdateQuantity(item.id, -1)} 
+                                  className="p-1 hover:bg-black/5 text-black transition-colors"
+                                  title="Kurangi jumlah"
+                                >
+                                  <Minus size={14} />
+                                </button>
                                 <span className="px-3 text-xs font-bold text-black">{item.quantity}</span>
-                                <button onClick={() => onUpdateQuantity(item.id, 1)} className="p-1 hover:bg-black/5 text-black"><Plus size={14} /></button>
+                                <button 
+                                  onClick={() => {
+                                    if (item.stock !== undefined && item.quantity >= item.stock) {
+                                      showToast(`Maksimal ${item.name} adalah ${item.stock} pcs sesuai stok!`, 'info');
+                                      return;
+                                    }
+                                    onUpdateQuantity(item.id, 1);
+                                  }} 
+                                  disabled={item.stock !== undefined && item.quantity >= item.stock}
+                                  className={cn(
+                                    "p-1 text-black transition-all",
+                                    item.stock !== undefined && item.quantity >= item.stock 
+                                      ? "opacity-30 cursor-not-allowed bg-black/5" 
+                                      : "hover:bg-black/5"
+                                  )}
+                                  title={item.stock !== undefined && item.quantity >= item.stock ? `Stok maksimal (${item.stock}) tercapai` : "Tambah jumlah"}
+                                >
+                                  <Plus size={14} />
+                                </button>
                               </div>
+                              {item.stock !== undefined && (
+                                <span className={cn(
+                                  "text-[10px] font-semibold",
+                                  item.quantity >= item.stock ? "text-amber-700 font-bold" : "text-black/40"
+                                )}>
+                                  {item.quantity >= item.stock ? `(Maks: ${item.stock})` : `(Stok: ${item.stock})`}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>

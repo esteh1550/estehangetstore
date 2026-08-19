@@ -1,11 +1,12 @@
 import React from 'react';
-import { Heart, ShoppingCart, Eye, Star, MapPin, Share2, Crown } from 'lucide-react';
+import { Heart, ShoppingCart, Eye, Star, MapPin, Share2, Crown, Sparkles, RefreshCw } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import { STORE } from '../constants';
 import { isLuxuryProduct } from '../lib/luxury';
+import { isSecondProduct } from '../lib/condition';
 
 interface ProductCardProps {
   key?: React.Key;
@@ -19,6 +20,7 @@ interface ProductCardProps {
 const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWishlist }: ProductCardProps) => {
   const store = STORE;
   const isLuxury = isLuxuryProduct(product);
+  const isSecond = isSecondProduct(product);
   
   // Use product.id to generate consistent "random" values
   const rating = React.useMemo(() => {
@@ -45,13 +47,13 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
       whileHover={{ y: -4 }}
       className={cn(
         "bg-[#FAF6F0] rounded-2xl overflow-hidden border shadow-sm hover:shadow-md transition-all group flex flex-col h-full relative p-3",
-        isLuxury ? "border-[#D4AF37]/50 shadow-[0_2px_12px_rgba(212,175,55,0.12)] bg-gradient-to-b from-[#FAF7EE] to-[#FAF6F0]" : "border-[#E5DEC9]",
+        isLuxury ? "border-amber-400/40 shadow-[0_2px_12px_rgba(217,119,6,0.08)] bg-gradient-to-b from-[#FAF8F3] to-[#FAF6F0]" : "border-[#E5DEC9]",
         isSoldOut && "opacity-85"
       )}
     >
       <div className={cn(
         "relative aspect-square overflow-hidden bg-white rounded-xl border",
-        isLuxury ? "border-[#D4AF37]/30" : "border-[#EDE4D5]"
+        isLuxury ? "border-amber-400/40" : "border-[#EDE4D5]"
       )}>
         <img
           src={product.images[0]}
@@ -63,15 +65,40 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
           referrerPolicy="no-referrer"
         />
         
-        {/* Luxury Badge for price > 500k */}
-        {isLuxury && (
+        {/* Top Badges (Premium + Condition) */}
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1.5 items-start">
+          {/* Premium Badge for price >= 500k */}
+          {isLuxury && (
+            <div
+              className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 text-[#ff00e7] border border-amber-400/50 text-[9px] font-black px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-md shadow-black/30 tracking-wider uppercase ring-1 ring-amber-400/20"
+            >
+              <Crown size={11} className="text-amber-400 stroke-[2.5]" />
+              <span className="text-[#ff00e7]">PREMIUM</span>
+            </div>
+          )}
+
+          {/* Condition Badge: Sepatu Second vs Sepatu Baru */}
           <div
-            className="absolute top-2 left-2 z-10 bg-gradient-to-r from-[#141210] to-[#2B2620] text-[#D4AF37] border border-[#D4AF37]/60 text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-md tracking-wider uppercase"
+            className={cn(
+              "text-[8.5px] font-black px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm tracking-wider uppercase border",
+              isSecond
+                ? "bg-amber-600 text-white border-amber-500 shadow-amber-900/20"
+                : "bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/20"
+            )}
           >
-            <Crown size={11} className="text-[#D4AF37]" />
-            <span>MEWAH</span>
+            {isSecond ? (
+              <>
+                <RefreshCw size={9} className="stroke-[2.5]" />
+                <span>SEPATU SECOND</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={9} className="stroke-[2.5]" />
+                <span>SEPATU BARU</span>
+              </>
+            )}
           </div>
-        )}
+        </div>
 
         {/* SOLD Overlay Badge */}
         {isSoldOut && (

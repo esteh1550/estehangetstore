@@ -20,11 +20,12 @@ import Orders from './pages/Orders';
 import { Product, CartItem } from './types';
 import { getAllProducts } from './lib/sellerService';
 import { PRODUCTS } from './constants';
-import { ToastProvider } from './components/Toast';
+import { ToastProvider, useToast } from './components/Toast';
 import SplashScreen from './components/SplashScreen';
 
-export default function App() {
+function AppContent() {
   const [showSplash, setShowSplash] = React.useState(true);
+  const { showToast } = useToast();
   const [cart, setCart] = React.useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('esteh_cart');
@@ -80,10 +81,23 @@ export default function App() {
   }, []);
 
   const addToCart = (product: Product & { selectedSize?: string }) => {
+    // Check if item is completely sold out
+    if (product.stock !== undefined && product.stock <= 0) {
+      showToast(`Maaf, ${product.name} sudah habis (SOLD OUT).`, 'error');
+      return;
+    }
+
     const defaultSize = product.selectedSize || (product.sizes && product.sizes.length > 0 ? product.sizes[0] : '40');
+    let exceededStock = false;
+
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id && item.selectedSize === defaultSize);
       if (existing) {
+        const maxStock = product.stock !== undefined ? product.stock : 999;
+        if (existing.quantity + 1 > maxStock) {
+          exceededStock = true;
+          return prev;
+        }
         return prev.map(item => 
           (item.id === product.id && item.selectedSize === defaultSize)
             ? { ...item, quantity: item.quantity + 1 }
@@ -92,13 +106,25 @@ export default function App() {
       }
       return [...prev, { ...product, selectedSize: defaultSize, quantity: 1 }];
     });
+
+    if (exceededStock) {
+      showToast(`Maksimal ${product.name} dalam keranjang adalah ${product.stock} pcs sesuai stok tersedia!`, 'error');
+      return;
+    }
+
+    showToast(`${product.name} dimasukkan ke keranjang.`, 'success');
     setIsCartOpen(true);
   };
 
   const updateCartQuantity = (id: string, delta: number) => {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
-        const newQty = Math.max(1, item.quantity + delta);
+        const maxStock = item.stock !== undefined ? item.stock : 999;
+        if (delta > 0 && item.quantity + delta > maxStock) {
+          showToast(`Stok ${item.name} hanya tersisa ${maxStock} pcs!`, 'error');
+          return item;
+        }
+        const newQty = Math.min(maxStock, Math.max(1, item.quantity + delta));
         return { ...item, quantity: newQty };
       }
       return item;
@@ -116,10 +142,9 @@ export default function App() {
   };
 
   return (
-    <ToastProvider>
-      <Router>
-        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={2800} />}
-        <div className="min-h-screen flex flex-col">
+    <Router>
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={2800} />}
+      <div className="min-h-screen flex flex-col">
         <Navbar 
           cartCount={cart.reduce((s, i) => s + i.quantity, 0)}
           wishlistCount={wishlist.length}
@@ -169,6 +194,13 @@ export default function App() {
         />
       </div>
     </Router>
-  </ToastProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
   );
 }
