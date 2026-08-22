@@ -20,17 +20,28 @@ import Orders from './pages/Orders';
 import { Product, CartItem } from './types';
 import { getAllProducts } from './lib/sellerService';
 import { PRODUCTS } from './constants';
-import { ToastProvider, useToast } from './components/Toast';
+import { ToastProvider } from './components/Toast';
 import SplashScreen from './components/SplashScreen';
 
-function AppContent() {
+export default function App() {
   const [showSplash, setShowSplash] = React.useState(true);
-  const { showToast } = useToast();
   const [cart, setCart] = React.useState<CartItem[]>(() => {
     try {
       const saved = localStorage.getItem('esteh_cart');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter((item: any) =>
+        item && typeof item.id === 'string' && typeof item.name === 'string' &&
+        Number.isFinite(Number(item.price)) && Number(item.quantity) > 0
+      ).map((item: any) => ({
+        ...item,
+        price: Number(item.price),
+        quantity: Math.max(1, Number(item.quantity)),
+        selectedSize: item.selectedSize ? String(item.selectedSize) : undefined,
+      }));
     } catch {
+      localStorage.removeItem('esteh_cart');
       return [];
     }
   });
@@ -67,7 +78,11 @@ function AppContent() {
   }, [wishlist]);
 
   React.useEffect(() => {
-    localStorage.setItem('esteh_cart', JSON.stringify(cart));
+    try {
+      localStorage.setItem('esteh_cart', JSON.stringify(cart));
+    } catch (e) {
+      console.error('Failed to persist cart', e);
+    }
   }, [cart]);
   React.useEffect(() => {
     try {
@@ -81,58 +96,39 @@ function AppContent() {
   }, []);
 
   const addToCart = (product: Product & { selectedSize?: string }) => {
-    // Check if item is completely sold out
-    if (product.stock !== undefined && product.stock <= 0) {
-      showToast(`Maaf, ${product.name} sudah habis (SOLD OUT).`, 'error');
-      return;
-    }
-
     const defaultSize = product.selectedSize || (product.sizes && product.sizes.length > 0 ? product.sizes[0] : '40');
-    let exceededStock = false;
-
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id && item.selectedSize === defaultSize);
       if (existing) {
-        const maxStock = product.stock !== undefined ? product.stock : 999;
-        if (existing.quantity + 1 > maxStock) {
-          exceededStock = true;
-          return prev;
-        }
-        return prev.map(item => 
+        const maxStock = Number.isFinite(existing.stock) && existing.stock > 0 ? existing.stock : Number.MAX_SAFE_INTEGER;
+        if (existing.quantity >= maxStock) return prev;
+        return prev.map(item =>
           (item.id === product.id && item.selectedSize === defaultSize)
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: Math.min(maxStock, item.quantity + 1) }
             : item
         );
       }
       return [...prev, { ...product, selectedSize: defaultSize, quantity: 1 }];
     });
-
-    if (exceededStock) {
-      showToast(`Maksimal ${product.name} dalam keranjang adalah ${product.stock} pcs sesuai stok tersedia!`, 'error');
-      return;
-    }
-
-    showToast(`${product.name} dimasukkan ke keranjang.`, 'success');
     setIsCartOpen(true);
   };
 
-  const updateCartQuantity = (id: string, delta: number) => {
+  const getCartKey = (item: Pick<CartItem, 'id' | 'selectedSize'>) =>
+    `${item.id}::${item.selectedSize || 'standard'}`;
+
+  const updateCartQuantity = (id: string, selectedSize: string | undefined, delta: number) => {
+    const key = getCartKey({ id, selectedSize });
     setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const maxStock = item.stock !== undefined ? item.stock : 999;
-        if (delta > 0 && item.quantity + delta > maxStock) {
-          showToast(`Stok ${item.name} hanya tersisa ${maxStock} pcs!`, 'error');
-          return item;
-        }
-        const newQty = Math.min(maxStock, Math.max(1, item.quantity + delta));
-        return { ...item, quantity: newQty };
-      }
-      return item;
+      if (getCartKey(item) !== key) return item;
+      const maxStock = Number.isFinite(item.stock) && item.stock > 0 ? item.stock : Number.MAX_SAFE_INTEGER;
+      const newQty = Math.min(maxStock, Math.max(1, item.quantity + delta));
+      return { ...item, quantity: newQty };
     }));
   };
 
-  const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+  const removeFromCart = (id: string, selectedSize: string | undefined) => {
+    const key = getCartKey({ id, selectedSize });
+    setCart(prev => prev.filter(item => getCartKey(item) !== key));
   };
 
   const toggleWishlist = (id: string) => {
@@ -142,9 +138,10 @@ function AppContent() {
   };
 
   return (
-    <Router>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={2800} />}
-      <div className="min-h-screen flex flex-col">
+    <ToastProvider>
+      <Router>
+        {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={1600} />}
+        <div className="min-h-screen flex flex-col">
         <Navbar 
           cartCount={cart.reduce((s, i) => s + i.quantity, 0)}
           wishlistCount={wishlist.length}
@@ -194,13 +191,6 @@ function AppContent() {
         />
       </div>
     </Router>
-  );
-}
-
-export default function App() {
-  return (
-    <ToastProvider>
-      <AppContent />
-    </ToastProvider>
+  </ToastProvider>
   );
 }

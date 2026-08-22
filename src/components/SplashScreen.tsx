@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Footprints, Sparkles } from 'lucide-react';
 
 interface SplashScreenProps {
   onFinish?: () => void;
@@ -11,14 +10,20 @@ const LOGO_URL = "https://cdn.phototourl.com/free/2026-08-13-b62f43fb-a043-44e5-
 
 export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
-  const [imgError, setImgError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
+    // Preload logo image
+    const img = new Image();
+    img.src = LOGO_URL;
+    img.onload = () => setImageLoaded(true);
+    img.onerror = () => setImageLoaded(true);
+
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(() => {
         if (onFinish) onFinish();
-      }, 500); // allow exit animation to complete
+      }, 600); // allow exit animation to complete
     }, duration);
 
     return () => clearTimeout(timer);
@@ -29,8 +34,8 @@ export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreen
       {isVisible && (
         <motion.div
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, scale: 1.03 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          exit={{ opacity: 0, scale: 1.04 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
           className="fixed inset-0 z-[99999] bg-[#FAF7F2] flex flex-col items-center justify-center p-6 select-none overflow-hidden"
         >
           {/* Subtle background vintage pattern */}
@@ -47,20 +52,14 @@ export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreen
               transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
               className="relative w-36 h-36 sm:w-44 sm:h-44 mb-6 bg-white rounded-3xl p-5 shadow-[0_16px_50px_rgba(24,21,18,0.12)] border border-[#E8DEC9] flex items-center justify-center overflow-hidden"
             >
-              {!imgError ? (
-                <img
-                  src={LOGO_URL}
-                  alt="E STORE Logo"
-                  onError={() => setImgError(true)}
-                  className="w-full h-full object-contain filter drop-shadow-md"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-[#B83A0E]">
-                  <Footprints size={56} className="text-[#B83A0E]" />
-                  <span className="font-serif font-black text-xs text-[#181512] mt-1 tracking-widest">E STORE</span>
-                </div>
-              )}
+              <img
+                src={LOGO_URL}
+                alt="E STORE Logo"
+                className={`w-full h-full object-contain filter drop-shadow-md transition-opacity duration-300 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-90'
+                }`}
+                referrerPolicy="no-referrer"
+              />
             </motion.div>
 
             {/* Brand Title */}
@@ -82,7 +81,7 @@ export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreen
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.3 }}
+              transition={{ delay: 0.4, duration: 0.3 }}
               className="mt-8 w-44 sm:w-52 h-1.5 bg-[#E8DEC9] rounded-full overflow-hidden relative"
             >
               <motion.div
@@ -97,7 +96,7 @@ export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreen
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.8 }}
-              transition={{ delay: 0.4, duration: 0.4 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
               className="mt-4 text-[10px] font-semibold tracking-[0.2em] text-[#7A7163] uppercase"
             >
               Mempersiapkan Koleksi Sepatu Original...

@@ -1,10 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Heart, ShoppingCart, Trash2, ArrowRight, Crown } from 'lucide-react';
+import { X, Heart, ShoppingCart, Trash2, ArrowRight } from 'lucide-react';
 import { Product } from '../types';
 import { formatPrice } from '../lib/utils';
-import { isSecondProduct } from '../lib/condition';
-import { isLuxuryProduct } from '../lib/luxury';
 
 interface WishlistSidebarProps {
   isOpen: boolean;
@@ -90,19 +88,9 @@ export default function WishlistSidebar({
                             </button>
                           </div>
                           <p className="text-xs font-bold text-tea-accent">{formatPrice(product.price)}</p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-block text-[9px] px-2 py-0.5 bg-black/5 text-black/60 rounded-full font-bold uppercase">
-                              {product.category}
-                            </span>
-                            <span className={`inline-block text-[8.5px] px-2 py-0.5 rounded-full font-black uppercase text-white ${isSecondProduct(product) ? 'bg-amber-600' : 'bg-emerald-600'}`}>
-                              {isSecondProduct(product) ? 'Second' : 'Baru'}
-                            </span>
-                            {isLuxuryProduct(product) && (
-                              <span className="inline-flex items-center gap-0.5 text-[8.5px] px-2 py-0.5 rounded-full font-black uppercase bg-gradient-to-r from-zinc-950 to-zinc-900 text-amber-300 border border-amber-400/40 shadow-sm">
-                                <Crown size={9} className="text-amber-400" /> PREMIUM
-                              </span>
-                            )}
-                          </div>
+                          <span className="inline-block text-[9px] px-2 py-0.5 bg-black/5 text-black/60 rounded-full font-bold uppercase">
+                            {product.category}
+                          </span>
                         </div>
                         
                         <div className="pt-2 flex justify-end">

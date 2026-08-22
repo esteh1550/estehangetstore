@@ -29,3 +29,6 @@ Aplikasi e-commerce toko sepatu online resmi **E STORE** bertema *Warm Heritage 
 - **Icons**: Lucide React
 - **Routing**: React Router DOM v6
 - **Backend/Database**: Firebase Firestore & Auth
+
+### Security hardening
+Firestore rules now enforce exact payload fields, admin-only catalog mutations, verified-user review identity, and bounded guest checkout payloads.

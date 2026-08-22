@@ -30,3 +30,10 @@
 ### ✏️ Teks & Slogan Resmi
 - Mengubah nama merek dari *HERITAGE* menjadi **E STORE**.
 - Mengubah slogan pendukung menjadi **SHOES STORE TERPERCAYA**.
+
+## Security & checkout hardening (2026-08-22)
+- Tightened Firestore store/product/review/customer-order payload validation with exact allowed fields.
+- Fixed review identity to use Firebase Auth UID instead of a hard-coded user id.
+- Removed public client-side product view writes under admin-only product rules.
+- Product-detail checkout now records to `customer_orders` and supports guest checkout without undefined Firestore fields.
+- Added guest order field/length validation in Firestore rules.

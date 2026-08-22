@@ -1,18 +1,17 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, Eye, X, Crown, Sparkles, RefreshCw } from 'lucide-react';
+import { ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, Eye, X } from 'lucide-react';
 import { saveOrder } from '../lib/storage';
 import { PRODUCTS, CONTACT_INFO } from '../constants';
 import { formatPrice, cn } from '../lib/utils';
 import { Product, Review } from '../types';
 import Modal from '../components/Modal';
-import { getProduct, addReview, getReviewsByProduct, recordOrder, incrementProductView, uploadImage } from '../lib/sellerService';
+import { getProduct, addReview, getReviewsByProduct, incrementProductView, uploadImage } from '../lib/sellerService';
 import { useProductHistory } from '../lib/useProductHistory';
 import ProductCard from '../components/ProductCard';
 import { useToast } from '../components/Toast';
-import { isLuxuryProduct } from '../lib/luxury';
-import { isSecondProduct } from '../lib/condition';
+import { auth, isFirebaseEnabled } from '../lib/firebase';
 
 interface ProductDetailProps {
   onAddToCart: (p: Product) => void;
@@ -36,9 +35,6 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
     address: '',
     courier: 'JNE'
   });
-
-  const isLuxury = isLuxuryProduct(product);
-  const isSecond = isSecondProduct(product);
 
   const [reviews, setReviews] = React.useState<Review[]>([]);
   const [selectedSize, setSelectedSize] = React.useState<string>('');
@@ -145,19 +141,32 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       const savedUser = localStorage.getItem('user_session');
       const user = savedUser ? JSON.parse(savedUser) : null;
       
-      const luxuryTag = isLuxury ? '\n💎 *[EDISI PREMIUM]*' : '';
+      const normalizedPhone = formData.phone.replace(/[^0-9+]/g, '');
+      if (normalizedPhone.replace(/\D/g, '').length < 10) {
+        showToast('Nomor WhatsApp/HP tampaknya belum valid.', 'error');
+        setIsSubmitting(false);
+        return;
+      }
 
-      // Create a record in Firestore orders collection
-      const orderUrl = `https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(`Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*${luxuryTag}\n*Ukuran (Size):* ${selectedSize || '40'}\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nNo. HP: ${formData.phone}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`)}`;
-      
-      await recordOrder({
-        userId: user?.uid || 'anonymous',
-        userName: formData.name,
-        items: [{ ...product, selectedSize: selectedSize || '40', quantity: 1 }],
+      const orderUrl = `https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(`Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*\n*Ukuran (Size):* ${selectedSize || '40'}\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nNo. HP: ${normalizedPhone}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`)}`;
+
+      const customerOrder = {
+        ...(user?.uid ? { userId: user.uid } : {}),
+        customerName: formData.name.trim(),
+        customerPhone: normalizedPhone,
+        address: formData.address.trim(),
+        items: [{
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1,
+          selectedSize: selectedSize || '40',
+          image: product.images[0] || ''
+        }],
         total: product.price,
-        status: 'pending',
-        checkoutUrl: orderUrl
-      });
+        paymentMethod: formData.courier
+      };
+      await saveOrder(customerOrder);
 
       window.open(orderUrl, '_blank');
       
@@ -165,8 +174,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error saving order:', error);
-      const luxuryTag = isLuxury ? '\n💎 *[EDISI PREMIUM]*' : '';
-      const text = `Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*${luxuryTag}\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`;
+      const text = `Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`;
       window.open(`https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(text)}`, '_blank');
       setShowCheckoutForm(false);
     } finally {
@@ -248,6 +256,8 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 src={product.images[activeImage]}
                 alt={product.name}
                 className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                loading="eager"
+                decoding="async"
                 referrerPolicy="no-referrer"
               />
             </AnimatePresence>
@@ -263,7 +273,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     activeImage === i ? "border-black scale-105" : "border-transparent opacity-50 hover:opacity-100"
                   )}
                 >
-                  <img src={img} alt={`${product.name} ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <img src={img} alt={`${product.name} ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>
@@ -276,32 +286,6 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
             <>
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Condition Badge: Sepatu Second vs Sepatu Baru */}
-                  <span className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-sm border",
-                    isSecond
-                      ? "bg-amber-600 text-white border-amber-500 shadow-amber-900/20"
-                      : "bg-emerald-700 text-white border-emerald-600 shadow-emerald-900/20"
-                  )}>
-                    {isSecond ? (
-                      <>
-                        <RefreshCw size={13} className="stroke-[2.5]" />
-                        <span>SEPATU SECOND</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={13} className="stroke-[2.5]" />
-                        <span>SEPATU BARU</span>
-                      </>
-                    )}
-                  </span>
-
-                  {isLuxury && (
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 text-amber-300 border border-amber-400/50 rounded-full text-xs font-black uppercase tracking-widest shadow-md shadow-black/30 ring-1 ring-amber-400/20">
-                      <Crown size={13} className="text-amber-400 stroke-[2.5]" />
-                      <span>EDISI PREMIUM</span>
-                    </span>
-                  )}
                   <span className="inline-block px-3 py-1 bg-tea-main/10 text-tea-main rounded-full text-xs font-bold uppercase tracking-widest text-outline">
                     {product.category}
                   </span>
@@ -340,10 +324,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   {product.name}
                 </h1>
                 <div className="flex items-center gap-6">
-                  <p className={cn(
-                    "text-3xl font-bold text-outline", 
-                    product.stock === 0 ? "text-black/40 line-through" : (isLuxury ? "text-[#9E2E0B]" : "text-black")
-                  )}>
+                  <p className={cn("text-3xl font-bold text-outline", product.stock === 0 ? "text-black/40 line-through" : "text-black")}>
                     {formatPrice(product.price)}
                   </p>
                   <div className="flex items-center gap-1 text-black/40 text-xs font-bold uppercase tracking-widest">
@@ -352,14 +333,6 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   </div>
                 </div>
               </div>
-
-              {/* Premium Badge Tag if price >= 500k */}
-              {isLuxury && (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-amber-400/40 text-amber-300 text-xs font-black tracking-wider uppercase shadow-sm ring-1 ring-amber-400/20">
-                  <Crown size={14} className="text-amber-400 stroke-[2.5]" />
-                  <span>Koleksi Sepatu Premium (&ge; Rp 500.000)</span>
-                </div>
-              )}
 
               <div className="flex items-center gap-3">
                 <button onClick={() => handleShare('wa')} className="p-3 bg-[#25D366] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><MessageCircle size={18} /></button>
@@ -430,13 +403,25 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 ) : (
                   <>
                     <button
-                      onClick={() => onAddToCart({ ...product, selectedSize })}
+                      onClick={() => {
+                        if (!selectedSize) {
+                          showToast('Pilih ukuran sepatu terlebih dahulu.', 'error');
+                          return;
+                        }
+                        onAddToCart({ ...product, selectedSize });
+                      }}
                       className="flex-1 bg-tea-main text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-lg shadow-tea-main/20"
                     >
                       <ShoppingCart size={24} /> Tambah ke Keranjang
                     </button>
                     <button
-                      onClick={() => setShowCheckoutForm(true)}
+                      onClick={() => {
+                        if (!selectedSize) {
+                          showToast('Pilih ukuran sepatu terlebih dahulu.', 'error');
+                          return;
+                        }
+                        setShowCheckoutForm(true);
+                      }}
                       className="flex-1 bg-black text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-lg shadow-black/20"
                     >
                       <MessageCircle size={24} /> Beli Sekarang

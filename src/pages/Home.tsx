@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Filter, Star, ChevronDown, ChevronUp, Zap, Footprints, Eye, Package, Check, Sparkles, Ruler, Crown } from 'lucide-react';
+import { Search, Filter, Star, ChevronDown, ChevronUp, Zap, Footprints, Eye, Package, Check, Sparkles, Ruler } from 'lucide-react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
@@ -11,8 +11,6 @@ import { getAllProducts } from '../lib/sellerService';
 import { useProductHistory } from '../lib/useProductHistory';
 import { useToast } from '../components/Toast';
 import { SHOE_BRANDS, SHOE_MODELS } from '../constants/shoeCategories';
-import { isLuxuryProduct, LUXURY_PRICE_THRESHOLD } from '../lib/luxury';
-import { isSecondProduct } from '../lib/condition';
 
 const ALL_SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'];
 
@@ -59,8 +57,6 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
   const [selectedShoeModel, setSelectedShoeModel] = React.useState<string>('all');
   const [selectedShoeType, setSelectedShoeType] = React.useState<string>('all');
   const [selectedSize, setSelectedSize] = React.useState<string>('all');
-  const [selectedCondition, setSelectedCondition] = React.useState<'all' | 'second' | 'baru'>('all');
-  const [onlyLuxury, setOnlyLuxury] = React.useState(false);
 
   React.useEffect(() => {
     const q = searchParams.get('q');
@@ -69,9 +65,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     const model = searchParams.get('model');
     const type = searchParams.get('type');
     const sz = searchParams.get('size');
-    const cond = searchParams.get('condition');
     const sort = searchParams.get('sort');
-    const lux = searchParams.get('luxury');
 
     setSearch(q !== null ? q : '');
     setCategory(cat !== null ? cat : 'all');
@@ -79,14 +73,6 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     setSelectedShoeModel(model !== null ? model : 'all');
     setSelectedShoeType(type !== null ? type : 'all');
     setSelectedSize(sz !== null ? sz : 'all');
-    if (cond === 'second' || cond === 'baru') {
-      setSelectedCondition(cond);
-    } else {
-      setSelectedCondition('all');
-    }
-    if (lux === 'true') {
-      setOnlyLuxury(true);
-    }
     if (sort === 'price-low' || sort === 'price-high' || sort === 'newest') {
       setSortBy(sort);
     }
@@ -181,14 +167,8 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     const pMin = minPrice ? parseInt(minPrice) : 0;
     const pMax = maxPrice ? parseInt(maxPrice) : Infinity;
     const matchesPrice = p.price >= pMin && p.price <= pMax;
-    const matchesLuxury = !onlyLuxury || isLuxuryProduct(p);
     
-    const isSecond = isSecondProduct(p);
-    const matchesCondition = selectedCondition === 'all' || 
-                             (selectedCondition === 'second' && isSecond) || 
-                             (selectedCondition === 'baru' && !isSecond);
-    
-    return matchesSearch && matchesCategory && matchesBrand && matchesShoeModel && matchesShoeType && matchesSize && matchesPrice && matchesLuxury && matchesCondition;
+    return matchesSearch && matchesCategory && matchesBrand && matchesShoeModel && matchesShoeType && matchesSize && matchesPrice;
   }).sort((a, b) => {
     // Sold out items always go to the bottom
     const aSold = (a.stock || 0) <= 0;
@@ -200,10 +180,6 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     if (sortBy === 'price-high') return b.price - a.price;
     return 0; // 'newest' is default order in constants
   });
-
-  const luxuryProducts = React.useMemo(() => {
-    return allProducts.filter(p => isLuxuryProduct(p) && (p.stock || 0) > 0);
-  }, [allProducts]);
 
   const { getRecommendedProducts, history } = useProductHistory();
 
@@ -236,7 +212,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
               <Filter size={18} className="text-black/60" />
               <h3 className="text-sm font-bold uppercase tracking-wider text-black">Filter & Katalog Sepatu</h3>
             </div>
-            {(selectedSize !== 'all' || selectedBrand !== 'all' || selectedShoeModel !== 'all' || selectedShoeType !== 'all' || selectedCondition !== 'all' || search !== '') && (
+            {(selectedSize !== 'all' || selectedBrand !== 'all' || selectedShoeModel !== 'all' || selectedShoeType !== 'all' || search !== '') && (
               <button 
                 onClick={() => {
                   setCategory('all');
@@ -244,7 +220,6 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                   setSelectedShoeModel('all');
                   setSelectedShoeType('all');
                   setSelectedSize('all');
-                  setSelectedCondition('all');
                   setSearch('');
                 }}
                 className="text-xs font-extrabold text-red-600 hover:underline flex items-center gap-1"
@@ -252,73 +227,6 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                 Reset Semua Filter
               </button>
             )}
-          </div>
-
-          {/* Filter Kondisi Sepatu (Baru / Second) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-black uppercase tracking-wider text-black/60 flex items-center gap-1.5">
-                <Sparkles size={14} className="text-emerald-600" />
-                Kondisi Sepatu
-              </span>
-              {selectedCondition !== 'all' && (
-                <button 
-                  onClick={() => setSelectedCondition('all')}
-                  className="text-[10px] font-bold text-blue-600 hover:underline"
-                >
-                  Lihat Semua Kondisi
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  setSelectedCondition('all');
-                  document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border",
-                  selectedCondition === 'all'
-                    ? "bg-black text-white border-black shadow-sm"
-                    : "bg-black/5 text-black border-transparent hover:bg-black/10"
-                )}
-              >
-                Semua Kondisi
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedCondition(selectedCondition === 'baru' ? 'all' : 'baru');
-                  document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border flex items-center gap-1.5",
-                  selectedCondition === 'baru'
-                    ? "bg-emerald-700 text-white border-emerald-700 shadow-md scale-105"
-                    : "bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100"
-                )}
-              >
-                <Sparkles size={12} className="stroke-[2.5]" />
-                <span>Sepatu Baru</span>
-                {selectedCondition === 'baru' && <Check size={12} />}
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedCondition(selectedCondition === 'second' ? 'all' : 'second');
-                  document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-xl text-xs font-black transition-all border flex items-center gap-1.5",
-                  selectedCondition === 'second'
-                    ? "bg-amber-600 text-white border-amber-600 shadow-md scale-105"
-                    : "bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100"
-                )}
-              >
-                <Zap size={12} className="stroke-[2.5]" />
-                <span>Sepatu Second</span>
-                {selectedCondition === 'second' && <Check size={12} />}
-              </button>
-            </div>
           </div>
 
           {/* Filter Ukuran Sepatu (Size) */}
@@ -623,57 +531,6 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
         </section>
       )}
 
-      {/* Luxury Showcase (Products > 500rb) */}
-      {!isShop && luxuryProducts.length > 0 && !search && (
-        <section className="max-w-7xl mx-auto px-4">
-          <div className="rounded-3xl bg-gradient-to-br from-[#12100E] via-[#1F1A14] to-[#2B2319] p-6 md:p-10 border border-[#D4AF37]/40 shadow-2xl text-white relative overflow-hidden">
-            {/* Background luxury accent */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
-            
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 relative z-10 border-b border-white/10 pb-6">
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#E5C158] text-xs font-black tracking-widest uppercase">
-                  <Crown size={14} className="text-[#D4AF37]" />
-                  <span>Koleksi Produk Mewah (&gt; Rp 500.000)</span>
-                </div>
-                <h2 className="text-2xl md:text-4xl font-display font-bold tracking-tight text-white">
-                  Koleksi Eksklusif & <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#FFF0B8]">Sepatu Pilihan</span>
-                </h2>
-                <p className="text-xs md:text-sm text-[#C4B9A7] max-w-2xl leading-relaxed">
-                  Pilihan produk sepatu mewah berkelas dengan material premium dan desain eksklusif untuk penampilan istimewa.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    setOnlyLuxury(true);
-                    document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#D4AF37] to-[#E5C158] text-black font-extrabold text-xs uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-[#D4AF37]/20"
-                >
-                  <Crown size={15} /> Lihat Semua ({luxuryProducts.length})
-                </button>
-              </div>
-            </div>
-
-            {/* Luxury Products Horizontal / Grid Slider */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 relative z-10">
-              {luxuryProducts.slice(0, 4).map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  isWishlisted={wishlist.includes(product.id)}
-                  onAddToCart={onAddToCart}
-                  onToggleWishlist={onToggleWishlist}
-                  onViewDetails={onViewDetails}
-                />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Product Section */}
       <section id="produk-list" className="max-w-7xl mx-auto px-4 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 bg-white p-6 rounded-2xl border border-black/5 shadow-sm">
@@ -764,32 +621,15 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
               <button
-                onClick={() => {
-                  setCategory('all');
-                  setOnlyLuxury(false);
-                }}
+                onClick={() => setCategory('all')}
                 className={cn(
                   "px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap",
-                  category === 'all' && !onlyLuxury
+                  category === 'all' 
                     ? "bg-tea-main text-black shadow-lg shadow-tea-main/20" 
                     : "bg-white text-black hover:bg-black/5"
                 )}
               >
                 Semua Produk
-              </button>
-
-              <button
-                onClick={() => setOnlyLuxury(prev => !prev)}
-                className={cn(
-                  "px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-1.5 border",
-                  onlyLuxury 
-                    ? "bg-[#161311] text-[#E5C158] border-[#D4AF37] shadow-lg shadow-[#D4AF37]/20" 
-                    : "bg-[#FDFBF7] text-[#8C6D1F] border-[#D4AF37]/40 hover:bg-[#F8F4EB]"
-                )}
-              >
-                <Crown size={14} className="text-[#D4AF37]" />
-                <span>Produk Mewah (&gt; 500rb)</span>
-                {onlyLuxury && <Check size={14} className="text-[#E5C158]" />}
               </button>
             </div>
           </div>

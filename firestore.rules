@@ -38,17 +38,31 @@ service cloud.firestore {
     // --- Validation Helpers ---
 
     function isValidStore(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+      return data.keys().hasOnly([
+               'id', 'name', 'logo', 'rating', 'location', 'description',
+               'isMall', 'isStar', 'ownerUid', 'createdAt', 'updatedAt'
+             ]) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.logo is string && data.logo.size() <= 200000 &&
+             data.rating is number && data.rating >= 0 && data.rating <= 5 &&
              data.location is string && data.location.size() <= 300 &&
              data.description is string && data.description.size() <= 2000;
     }
 
     function isValidProduct(data) {
-      return data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+      return data.keys().hasOnly([
+               'id', 'name', 'price', 'originalPrice', 'category', 'brand', 'condition',
+               'shoeModel', 'shoeType', 'sizes', 'stock', 'images', 'description',
+               'specifications', 'storeId', 'views', 'isRecommended', 'ownerUid',
+               'createdAt', 'updatedAt'
+             ]) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
              data.price is number && data.price >= 0 &&
-             data.category is string &&
+             data.category is string && data.category in ['gadget', 'pakaian', 'sepatu', 'digital'] &&
              data.stock is number && data.stock >= 0 &&
-             data.images is list && data.images.size() <= 30;
+             data.images is list && data.images.size() <= 30 &&
+             data.description is string && data.description.size() <= 10000 &&
+             data.specifications is list && data.specifications.size() <= 100;
     }
 
     function isValidReview(data) {
@@ -65,7 +79,11 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isAdmin() && isValidStore(incoming()) && 
                         incoming().keys().hasAll(['name', 'location', 'description']);
-      allow update: if isAdmin() && isValidStore(incoming());
+      allow update: if isAdmin() && isValidStore(incoming()) &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          'name', 'logo', 'rating', 'location', 'description',
+                          'isMall', 'isStar', 'ownerUid', 'updatedAt'
+                        ]);
       allow delete: if isAdmin();
     }
 
@@ -73,15 +91,22 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if true;
       allow create: if isAdmin() && isValidProduct(incoming()) &&
-                        incoming().keys().hasAll(['storeId', 'name', 'price', 'category']);
-      allow update: if isAdmin() && isValidProduct(incoming());
+                        incoming().keys().hasAll(['storeId', 'name', 'price', 'category', 'stock', 'images', 'description', 'specifications']);
+      allow update: if isAdmin() && isValidProduct(incoming()) &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                          'name', 'price', 'originalPrice', 'category', 'brand', 'condition',
+                          'shoeModel', 'shoeType', 'sizes', 'stock', 'images', 'description',
+                          'specifications', 'storeId', 'views', 'isRecommended', 'ownerUid', 'updatedAt'
+                        ]);
       allow delete: if isAdmin();
     }
 
     // 3. Reviews
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if emailVerified() && isValidReview(incoming());
+      allow create: if emailVerified() &&
+                        incoming().keys().hasOnly(['productId', 'userId', 'userName', 'rating', 'comment', 'images', 'createdAt']) &&
+                        isValidReview(incoming());
       allow delete: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
     }
 
@@ -92,7 +117,17 @@ service cloud.firestore {
 
     // 5. Customer Orders
     match /customer_orders/{orderId} {
-      allow create: if true; // Guest checkout allowed
+      allow create: if incoming().keys().hasOnly([
+                       'userId', 'customerName', 'customerPhone', 'address',
+                       'items', 'total', 'paymentMethod', 'status', 'createdAt'
+                     ]) &&
+                     incoming().customerName is string && incoming().customerName.size() > 0 && incoming().customerName.size() <= 120 &&
+                     incoming().customerPhone is string && incoming().customerPhone.size() >= 8 && incoming().customerPhone.size() <= 25 &&
+                     incoming().address is string && incoming().address.size() > 0 && incoming().address.size() <= 1000 &&
+                     incoming().items is list && incoming().items.size() > 0 && incoming().items.size() <= 50 &&
+                     incoming().total is number && incoming().total >= 0 &&
+                     incoming().paymentMethod is string && incoming().paymentMethod.size() > 0 && incoming().paymentMethod.size() <= 100 &&
+                     incoming().status == 'pending';
       allow read, write: if isAdmin();
     }
 

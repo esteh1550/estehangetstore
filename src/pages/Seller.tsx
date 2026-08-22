@@ -46,9 +46,6 @@ import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
 
 import { SHOE_BRANDS, SHOE_MODELS } from '../constants/shoeCategories';
 import { generateShoeDetails } from '../utils/shoeAutoGenerator';
-import { isLuxuryProduct, LUXURY_PRICE_THRESHOLD } from '../lib/luxury';
-import { isSecondProduct } from '../lib/condition';
-import { Crown, RefreshCw } from 'lucide-react';
 
 export default function Seller() {
   const [store, setStore] = React.useState<Store | null>(null);
@@ -520,8 +517,6 @@ function StatCard({ title, value, icon }: { title: string, value: string | numbe
 }
 
 function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: () => void, onDelete: () => void }) {
-  const isLuxury = isLuxuryProduct(product);
-  const isSecond = isSecondProduct(product);
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}/product/${product.id}`;
@@ -538,31 +533,10 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
   };
 
   return (
-    <div className={cn(
-      "bg-white rounded-3xl border overflow-hidden group shadow-sm transition-all",
-      isLuxury ? "border-amber-400/40 shadow-[0_4px_15px_rgba(217,119,6,0.08)]" : "border-black/5"
-    )}>
+    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden group shadow-sm">
       <div className="aspect-video relative overflow-hidden">
         <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-        
-        <div className="absolute top-4 left-4 z-10 flex flex-col gap-1 items-start">
-          {isLuxury && (
-            <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 text-amber-300 border border-amber-400/50 text-[9px] font-black px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow-md ring-1 ring-amber-400/20">
-              <Crown size={11} className="text-amber-400 stroke-[2.5]" />
-              <span>PREMIUM</span>
-            </div>
-          )}
-
-          <div className={cn(
-            "text-[9px] font-black px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow-sm uppercase border text-white",
-            isSecond ? "bg-amber-600 border-amber-500" : "bg-emerald-600 border-emerald-500"
-          )}>
-            {isSecond ? <RefreshCw size={9} /> : <Sparkles size={9} />}
-            <span>{isSecond ? 'Sepatu Second' : 'Sepatu Baru'}</span>
-          </div>
-        </div>
-
-        <div className="absolute top-4 right-4 flex gap-2 z-10">
+        <div className="absolute top-4 right-4 flex gap-2">
           <button 
             title="Bagikan Link Produk"
             onClick={handleShare} 
@@ -582,18 +556,10 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
         <Link to={`/product/${product.id}`}>
           <h4 className="font-bold text-black truncate hover:text-tea-main transition-colors">{product.name}</h4>
         </Link>
-        <p className={cn("font-bold", isLuxury ? "text-[#9E2E0B]" : "text-tea-main")}>
-          {formatPrice(product.price)}
-        </p>
-        <div className="flex items-center gap-2 flex-wrap">
+        <p className="text-tea-main font-bold">{formatPrice(product.price)}</p>
+        <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 px-2 py-1 rounded-lg text-black/40">
             {product.category}
-          </span>
-          <span className={cn(
-            "text-[9px] font-bold uppercase px-2 py-0.5 rounded-md",
-            isSecond ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
-          )}>
-            {isSecond ? "Second" : "Baru"}
           </span>
           <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 uppercase tracking-widest">
             <Eye size={10} />
@@ -890,62 +856,20 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
             </div>
             <input
               required
-              placeholder="Contoh: Nike Air Jordan 1 Low White Black (atau tambahkan SECOND)"
+              placeholder="Contoh: Nike Air Jordan 1 Low White Black"
               className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl px-4 py-4 text-sm transition-all text-black font-medium"
               value={formData.name}
               onChange={e => handleNameChange(e.target.value)}
             />
-
-            {/* Condition preview and quick SECOND toggle */}
-            <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-bold text-black/50">Status Badge:</span>
-                {isSecondProduct({ name: formData.name }) ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-600 text-white">
-                    <RefreshCw size={10} /> SEPATU SECOND
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-700 text-white">
-                    <Sparkles size={10} /> SEPATU BARU
-                  </span>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (isSecondProduct({ name: formData.name })) {
-                    // Remove SECOND word
-                    const cleaned = formData.name.replace(/\bsecond\b/gi, '').replace(/\s{2,}/g, ' ').trim();
-                    handleNameChange(cleaned);
-                  } else {
-                    // Add SECOND
-                    const updated = formData.name.trim() ? `${formData.name.trim()} SECOND` : 'SECOND';
-                    handleNameChange(updated);
-                  }
-                }}
-                className="text-[10px] font-bold text-tea-accent underline hover:text-black transition-colors"
-              >
-                {isSecondProduct({ name: formData.name }) ? 'Jadikan Sepatu Baru' : '+ Tandai sebagai Sepatu Second'}
-              </button>
-            </div>
-
             {isAutoGenerated && (
-              <p className="text-[11px] font-bold text-green-600 flex items-center gap-1 animate-bounce pt-1">
+              <p className="text-[11px] font-bold text-green-600 flex items-center gap-1 animate-bounce">
                 ✨ Deskripsi & spesifikasi otomatis terisi sesuai nama produk!
               </p>
             )}
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-widest text-black/40">Harga (Rp)</label>
-              {formData.price >= LUXURY_PRICE_THRESHOLD && (
-                <span className="text-[11px] font-black text-amber-300 bg-gradient-to-r from-zinc-950 to-zinc-900 px-2.5 py-0.5 rounded-md border border-amber-400/40 flex items-center gap-1 shadow-sm ring-1 ring-amber-400/20">
-                  <Crown size={12} className="text-amber-400" /> KOLEKSI PREMIUM (&ge; Rp 500.000)
-                </span>
-              )}
-            </div>
+            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Harga (Rp)</label>
             <div className="relative">
               <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
               <input

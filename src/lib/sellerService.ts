@@ -280,14 +280,9 @@ export const getProduct = async (productId: string): Promise<Product | null> => 
 };
 
 export const incrementProductView = async (productId: string) => {
-  if (isFirebaseEnabled && db) {
-    try {
-      await updateDoc(doc(db, 'products', productId), { views: increment(1) });
-      return;
-    } catch (e) {
-      handleFirestoreError(e, OperationType.UPDATE, `products/${productId}/views`);
-    }
-  }
+  // Views are intentionally best-effort. Public clients must not be able to mutate
+  // product inventory or metadata under the strict admin-only product rule.
+  if (isFirebaseEnabled && db) return;
   const products = getLocalData<Product>('products');
   const updated = products.map(p => p.id === productId ? { ...p, views: (p.views || 0) + 1 } : p);
   setLocalData('products', updated);
@@ -329,11 +324,14 @@ export const getReviewsByProduct = (productId: string, callback: (reviews: Revie
 export const addReview = async (productId: string, rating: number, comment: string, images: string[] = []) => {
   if (isFirebaseEnabled && db) {
     try {
+      ensureAuth();
+      const currentUser = auth?.currentUser;
+      if (!currentUser) throw new Error('PERMISSION_DENIED: Login diperlukan untuk mengirim ulasan.');
       const reviewsRef = collection(db, 'reviews');
       await addDoc(reviewsRef, {
         productId,
-        userId: 'cloud_user', // This would depend on real auth in prod
-        userName: 'Pecinta Teh',
+        userId: currentUser.uid,
+        userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'Pelanggan',
         rating,
         comment,
         images,

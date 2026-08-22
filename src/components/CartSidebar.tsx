@@ -1,13 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShoppingBag, Trash2, Plus, Minus, MessageSquare, CreditCard, Wallet, Building2, QrCode, Loader2, Crown, ShieldCheck } from 'lucide-react';
+import { X, ShoppingBag, Trash2, Plus, Minus, MessageSquare, CreditCard, Wallet, Building2, QrCode, Loader2 } from 'lucide-react';
 import { CartItem } from '../types';
 import { formatPrice, cn } from '../lib/utils';
 import { CONTACT_INFO } from '../constants';
 import { saveOrder } from '../lib/storage';
 import { useToast } from './Toast';
-import { isLuxuryProduct } from '../lib/luxury';
-import { isSecondProduct } from '../lib/condition';
 
 const PAYMENT_METHODS = [
   { id: 'transfer', name: 'Transfer Bank', icon: <Building2 size={18} />, desc: 'BCA, Mandiri, BNI' },
@@ -20,8 +18,8 @@ interface CartSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   items: CartItem[];
-  onUpdateQuantity: (id: string, delta: number) => void;
-  onRemove: (id: string) => void;
+  onUpdateQuantity: (id: string, selectedSize: string | undefined, delta: number) => void;
+  onRemove: (id: string, selectedSize: string | undefined) => void;
 }
 
 export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, onRemove }: CartSidebarProps) {
@@ -74,8 +72,19 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
   };
 
   const handleCheckout = async () => {
-    if (!customerName || !customerPhone || !address) {
+    const normalizedPhone = customerPhone.replace(/[^0-9+]/g, '');
+    if (!customerName.trim() || !normalizedPhone || !address.trim()) {
       showToast('Mohon lengkapi data pengiriman Kak!', 'error');
+      return;
+    }
+    if (normalizedPhone.replace(/\D/g, '').length < 10) {
+      showToast('Nomor WhatsApp/HP tampaknya belum valid.', 'error');
+      return;
+    }
+
+    const invalidStockItem = items.find(item => item.stock <= 0 || item.quantity > item.stock);
+    if (invalidStockItem) {
+      showToast(`Stok ${invalidStockItem.name} tidak mencukupi. Silakan perbarui keranjang.`, 'error');
       return;
     }
 
@@ -92,21 +101,16 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
         name: i.name,
         price: i.price,
         quantity: i.quantity,
+        selectedSize: i.selectedSize,
         image: i.images[0]
       })),
       total,
       paymentMethod: payment?.name || selectedPayment
     });
 
-    const itemsList = items.map(item => {
-      const isItemLux = isLuxuryProduct(item);
-      const isItemSecond = isSecondProduct(item);
-      const condTag = isItemSecond ? '[SECOND]' : '[BARU]';
-      return `- ${item.name} ${condTag} (Size: ${item.selectedSize || 'Standard'}) (${item.quantity}x)${isItemLux ? ' 💎 [EDISI PREMIUM]' : ''}`;
-    }).join('\n');
-
-    let text = `Halo Admin E STORE, saya ingin memesan:\n\n*Nama:* ${customerName}\n*No. HP:* ${customerPhone}\n*Alamat:* ${address}\n\n*Daftar Pesanan:*\n${itemsList}\n\n`;
-
+    const itemsList = items.map(item => `- ${item.name} (Size: ${item.selectedSize || 'Standard'}) (${item.quantity}x)`).join('\n');
+    let text = `Halo Admin E STORE, saya ingin memesan:\n\n*Nama:* ${customerName}\n*No. HP:* ${normalizedPhone}\n*Alamat:* ${address}\n\n*Daftar Pesanan:*\n${itemsList}\n\n`;
+    
     if (appliedPromo) {
       text += `*Subtotal:* ${formatPrice(subtotal)}\n*Promo:* ${appliedPromo} (-${discountPercent}%)\n*Diskon:* -${formatPrice(discountAmount)}\n`;
     }
@@ -138,7 +142,7 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 right-0 bottom-0 w-full max-w-md bg-bone z-[101] shadow-2xl flex flex-col"
+            className="fixed top-0 right-0 bottom-0 w-full sm:max-w-md bg-bone z-[101] shadow-2xl flex flex-col"
           >
             <div className="p-6 flex items-center justify-between border-b border-black/10">
               <div className="flex items-center gap-2">
@@ -161,88 +165,41 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                 <>
                   <div className="space-y-4">
                     <h3 className="text-xs font-bold uppercase tracking-widest text-black/40">Daftar Produk</h3>
-                    {items.map((item) => {
-                      const isItemLux = isLuxuryProduct(item);
-                      return (
-                        <div 
-                          key={item.id} 
-                          className={cn(
-                            "flex gap-4 bg-white p-3 rounded-2xl shadow-sm border",
-                            isItemLux ? "border-[#D4AF37]/50 bg-gradient-to-b from-[#FFFDF9] to-white" : "border-black/5"
-                          )}
-                        >
-                          <img src={item.images[0]} alt={item.name} className="w-20 h-20 object-cover rounded-xl shrink-0" referrerPolicy="no-referrer" />
-                          <div className="flex-1 space-y-2 min-w-0">
-                            <div className="flex justify-between items-start gap-1">
-                              <h3 className="font-bold text-sm leading-tight text-black line-clamp-1">{item.name}</h3>
-                              <button onClick={() => onRemove(item.id)} className="text-red-400 hover:text-red-600 shrink-0">
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className={cn("text-xs font-bold", isItemLux ? "text-[#9E2E0B]" : "text-black/60")}>
-                                {formatPrice(item.price)}
-                              </p>
-                              {item.selectedSize && (
-                                <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 rounded-md uppercase tracking-wider">
-                                  Size: {item.selectedSize}
-                                </span>
-                              )}
-                              <span className={cn(
-                                "text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider text-white",
-                                isSecondProduct(item) ? "bg-amber-600" : "bg-emerald-600"
-                              )}>
-                                {isSecondProduct(item) ? "Second" : "Baru"}
+                    {items.map((item) => (
+                      <div key={`${item.id}::${item.selectedSize || 'standard'}`} className="flex gap-4 bg-white p-3 rounded-2xl shadow-sm border border-black/5">
+                        <img src={item.images[0]} alt={item.name} className="w-20 h-20 object-cover rounded-xl" referrerPolicy="no-referrer" />
+                        <div className="flex-1 space-y-2">
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-bold text-sm leading-tight text-black">{item.name}</h3>
+                            <button onClick={() => onRemove(item.id, item.selectedSize)} className="text-red-400 hover:text-red-600">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-bold text-black/60">{formatPrice(item.price)}</p>
+                            {item.selectedSize && (
+                              <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                Size: {item.selectedSize}
                               </span>
-                              {isItemLux && (
-                                <span className="text-[9px] font-black bg-gradient-to-r from-zinc-950 to-zinc-900 text-amber-300 border border-amber-400/40 px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-sm">
-                                  <Crown size={9} className="text-amber-400" /> PREMIUM
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center border border-black/10 rounded-lg overflow-hidden bg-white">
-                                <button 
-                                  onClick={() => onUpdateQuantity(item.id, -1)} 
-                                  className="p-1 hover:bg-black/5 text-black transition-colors"
-                                  title="Kurangi jumlah"
-                                >
-                                  <Minus size={14} />
-                                </button>
-                                <span className="px-3 text-xs font-bold text-black">{item.quantity}</span>
-                                <button 
-                                  onClick={() => {
-                                    if (item.stock !== undefined && item.quantity >= item.stock) {
-                                      showToast(`Maksimal ${item.name} adalah ${item.stock} pcs sesuai stok!`, 'info');
-                                      return;
-                                    }
-                                    onUpdateQuantity(item.id, 1);
-                                  }} 
-                                  disabled={item.stock !== undefined && item.quantity >= item.stock}
-                                  className={cn(
-                                    "p-1 text-black transition-all",
-                                    item.stock !== undefined && item.quantity >= item.stock 
-                                      ? "opacity-30 cursor-not-allowed bg-black/5" 
-                                      : "hover:bg-black/5"
-                                  )}
-                                  title={item.stock !== undefined && item.quantity >= item.stock ? `Stok maksimal (${item.stock}) tercapai` : "Tambah jumlah"}
-                                >
-                                  <Plus size={14} />
-                                </button>
-                              </div>
-                              {item.stock !== undefined && (
-                                <span className={cn(
-                                  "text-[10px] font-semibold",
-                                  item.quantity >= item.stock ? "text-amber-700 font-bold" : "text-black/40"
-                                )}>
-                                  {item.quantity >= item.stock ? `(Maks: ${item.stock})` : `(Stok: ${item.stock})`}
-                                </span>
-                              )}
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center border border-black/10 rounded-lg overflow-hidden">
+                              <button onClick={() => onUpdateQuantity(item.id, item.selectedSize, -1)} className="p-1 hover:bg-black/5 text-black"><Minus size={14} /></button>
+                              <span className="px-3 text-xs font-bold text-black">{item.quantity}</span>
+                              <button
+                                onClick={() => onUpdateQuantity(item.id, item.selectedSize, 1)}
+                                disabled={item.stock > 0 && item.quantity >= item.stock}
+                                className="p-1 hover:bg-black/5 text-black disabled:opacity-30 disabled:cursor-not-allowed"
+                                aria-label="Tambah jumlah"
+                              >
+                                <Plus size={14} />
+                              </button>
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                   </div>
 
                   <div className="space-y-4">
@@ -250,7 +207,9 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                     <div className="space-y-3">
                       <input 
                         type="text" 
-                        placeholder="Nama Lengkap" 
+                        placeholder="Nama Lengkap"
+                        autoComplete="name"
+                        maxLength={80} 
                         className="w-full bg-white border border-black/5 rounded-xl px-4 py-3 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
@@ -263,7 +222,9 @@ export default function CartSidebar({ isOpen, onClose, items, onUpdateQuantity, 
                         onChange={(e) => setCustomerPhone(e.target.value)}
                       />
                       <textarea 
-                        placeholder="Alamat Lengkap" 
+                        placeholder="Alamat Lengkap"
+                        autoComplete="street-address"
+                        maxLength={500} 
                         rows={3}
                         className="w-full bg-white border border-black/5 rounded-xl px-4 py-3 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-blue/50"
                         value={address}
