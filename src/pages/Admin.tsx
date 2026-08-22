@@ -5,10 +5,13 @@ import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getLocalOrders, getLocalNewsletters, OrderRecord, NewsletterRecord, clearLocalData, updateLocalOrderStatus } from '../lib/storage';
 import { formatPrice } from '../lib/utils';
 import { 
-  updateOrderStatus
+  updateOrderStatus,
+  getMyProducts
 } from '../lib/sellerService';
+import { Product } from '../types';
 import { CONTACT_INFO, ADMIN_EMAIL, ADMIN_EMAILS, isAdminEmail, getAllAdminEmails, addAdminEmail, removeAdminEmail } from '../constants';
-import { Loader2, LogOut, ShoppingBag, Mail, CheckCircle, Clock, Trash2, Package, ShieldAlert, Globe, Users, Plus, ShieldCheck, UserCheck } from 'lucide-react';
+import { Loader2, LogOut, ShoppingBag, Mail, CheckCircle, Clock, Trash2, Package, ShieldAlert, Globe, Users, Plus, ShieldCheck, UserCheck, FileText, Printer, Sparkles, ExternalLink } from 'lucide-react';
+import InvoiceMaker from '../components/InvoiceMaker';
 
 // Admin dashboard component
 export default function Admin() {
@@ -17,10 +20,12 @@ export default function Admin() {
   const [loading, setLoading] = React.useState(true);
   const [orders, setOrders] = React.useState<OrderRecord[]>([]);
   const [newsletters, setNewsletters] = React.useState<NewsletterRecord[]>([]);
-  const [activeTab, setActiveTab] = React.useState<'orders' | 'newsletter' | 'admins'>('orders');
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [activeTab, setActiveTab] = React.useState<'orders' | 'invoices' | 'newsletter' | 'admins'>('orders');
   const [adminEmailsList, setAdminEmailsList] = React.useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = React.useState('');
   const [loginEmailInput, setLoginEmailInput] = React.useState('');
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = React.useState<OrderRecord | null>(null);
 
   const refreshAdminList = () => {
     setAdminEmailsList(getAllAdminEmails());
@@ -46,9 +51,17 @@ export default function Admin() {
     setOrders(getLocalOrders());
     setNewsletters(getLocalNewsletters());
     refreshAdminList();
+
+    const unsubProducts = getMyProducts((prods) => {
+      setProducts(prods);
+    });
+
     setLoading(false);
 
-    return () => unsubscribe?.();
+    return () => {
+      unsubscribe?.();
+      unsubProducts?.();
+    };
   }, []);
 
   const handleLogin = async () => {
@@ -245,30 +258,42 @@ export default function Admin() {
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap p-1 bg-black/5 rounded-2xl w-fit mx-auto md:mx-0 gap-1">
+        <div className="flex flex-wrap p-1 bg-black/5 rounded-2xl w-fit mx-auto md:mx-0 gap-1 no-print">
           <button 
             onClick={() => setActiveTab('orders')}
-            className={`px-6 sm:px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'orders' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
+            className={`px-5 sm:px-7 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'orders' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
           >
-            <ShoppingBag size={20} /> Pesanan ({orders.length})
+            <ShoppingBag size={18} /> Pesanan ({orders.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('invoices')}
+            className={`px-5 sm:px-7 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'invoices' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
+          >
+            <FileText size={18} /> Invoice & Nota Maker
           </button>
           <button 
             onClick={() => setActiveTab('newsletter')}
-            className={`px-6 sm:px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'newsletter' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
+            className={`px-5 sm:px-7 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'newsletter' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
           >
-            <Mail size={20} /> Newsletter ({newsletters.length})
+            <Mail size={18} /> Newsletter ({newsletters.length})
           </button>
           <button 
             onClick={() => setActiveTab('admins')}
-            className={`px-6 sm:px-8 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'admins' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
+            className={`px-5 sm:px-7 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'admins' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
           >
-            <Users size={20} /> Akun Admin ({adminEmailsList.length})
+            <Users size={18} /> Akun Admin ({adminEmailsList.length})
           </button>
         </div>
 
         {/* Content */}
         <div className="grid grid-cols-1 gap-6">
-          {activeTab === 'orders' ? (
+          {activeTab === 'invoices' ? (
+            <InvoiceMaker 
+              initialOrder={selectedOrderForInvoice}
+              onClearInitialOrder={() => setSelectedOrderForInvoice(null)}
+              allProducts={products}
+            />
+          ) : activeTab === 'orders' ? (
             orders.length > 0 ? (
               orders.map((order, index) => (
                 <motion.div 
@@ -306,7 +331,17 @@ export default function Admin() {
                         <p className="text-xl font-bold text-tea-main">{formatPrice(order.total)}</p>
                       </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-start gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedOrderForInvoice(order);
+                          setActiveTab('invoices');
+                        }}
+                        className="px-4 py-3 rounded-xl bg-tea-main/10 hover:bg-tea-main hover:text-white text-tea-main font-bold text-xs transition-all flex items-center gap-2 border border-tea-main/20"
+                        title="Buat Nota Resmi dari Pesanan Ini"
+                      >
+                        <FileText size={16} /> Buat Nota / Invoice
+                      </button>
                       <button 
                         onClick={() => updateOrderStatusHandler(order.id, 'processing')}
                         className={`p-3 rounded-xl transition-all ${order.status === 'processing' ? 'bg-tea-main text-white' : 'bg-black/5 text-black/40 hover:text-tea-main'}`}

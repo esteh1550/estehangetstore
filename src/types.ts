@@ -69,3 +69,46 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
+export interface InvoiceItem {
+  id: string;
+  name: string;
+  size?: string;
+  condition?: string;
+  price: number;
+  quantity: number;
+  discount?: number;
+  subtotal: number;
+}
+
+export interface InvoiceData {
+  id: string;
+  invoiceNumber: string;
+  date: string;
+  dueDate?: string;
+  storeName: string;
+  storeAddress: string;
+  storePhone: string;
+  storeEmail?: string;
+  storeLogo?: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  courier?: string;
+  trackingNumber?: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  shippingFee: number;
+  discountAmount: number;
+  packingFee?: number;
+  grandTotal: number;
+  paidAmount: number;
+  remainingAmount: number;
+  paymentMethod: string;
+  bankAccountInfo?: string;
+  paymentStatus: 'LUNAS' | 'BELUM LUNAS' | 'DP' | 'BATAL';
+  notes?: string;
+  adminName?: string;
+  createdAt: string;
+}
+

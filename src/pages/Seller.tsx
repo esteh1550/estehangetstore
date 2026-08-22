@@ -43,6 +43,7 @@ import { Store, Product } from '../types';
 import { cn, formatPrice } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
+import InvoiceMaker from '../components/InvoiceMaker';
 
 import { SHOE_BRANDS, SHOE_MODELS } from '../constants/shoeCategories';
 import { generateShoeDetails } from '../utils/shoeAutoGenerator';
@@ -54,7 +55,7 @@ export default function Seller() {
   const [authLoading, setAuthLoading] = React.useState(isFirebaseEnabled);
   const [isFirebaseAuthed, setIsFirebaseAuthed] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'products' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'products' | 'invoices' | 'settings'>('dashboard');
   const [isEditingStore, setIsEditingStore] = React.useState(false);
   const [isAddingProduct, setIsAddingProduct] = React.useState(false);
   const [isImportingLink, setIsImportingLink] = React.useState(false);
@@ -195,6 +196,7 @@ export default function Seller() {
             <div className="flex bg-black/5 p-1 rounded-xl">
               <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={16} />} label="Dashboard" />
               <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<Package size={16} />} label="Produk" />
+              <TabButton active={activeTab === 'invoices'} onClick={() => setActiveTab('invoices')} icon={<FileText size={16} />} label="Invoice & Nota" />
               <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={16} />} label="Toko" />
             </div>
           )}
@@ -316,6 +318,18 @@ export default function Seller() {
                   </div>
                 )}
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'invoices' && (
+            <motion.div
+              key="invoices"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <InvoiceMaker allProducts={products} />
             </motion.div>
           )}
 
