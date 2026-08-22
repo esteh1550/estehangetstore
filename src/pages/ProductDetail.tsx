@@ -1,9 +1,9 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, Eye, X } from 'lucide-react';
+import { ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, Eye, X, Store, Truck, Building2, Banknote, MapPin } from 'lucide-react';
 import { saveOrder } from '../lib/storage';
-import { PRODUCTS, CONTACT_INFO } from '../constants';
+import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
 import { formatPrice, cn } from '../lib/utils';
 import { Product, Review } from '../types';
 import Modal from '../components/Modal';
@@ -29,11 +29,13 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
   const [showCheckoutForm, setShowCheckoutForm] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+  const [deliveryType, setDeliveryType] = React.useState<'pickup' | 'shipping'>('pickup');
+  const [paymentMethod, setPaymentMethod] = React.useState<'transfer' | 'cash'>('transfer');
   const [formData, setFormData] = React.useState({
     name: '',
     phone: '',
     address: '',
-    courier: 'JNE'
+    courier: 'JNE Regular'
   });
 
   const [reviews, setReviews] = React.useState<Review[]>([]);
@@ -134,27 +136,57 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
 
   const handleConfirmPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || !product) return;
+
+    const normalizedPhone = formData.phone.replace(/[^0-9+]/g, '');
+    if (!formData.name.trim() || !normalizedPhone) {
+      showToast('Mohon lengkapi Nama & Nomor WhatsApp Anda Kak!', 'error');
+      return;
+    }
+    if (normalizedPhone.replace(/\D/g, '').length < 10) {
+      showToast('Nomor WhatsApp/HP tampaknya belum valid.', 'error');
+      return;
+    }
+
+    if (deliveryType === 'shipping' && !formData.address.trim()) {
+      showToast('Mohon isi alamat pengiriman Kak!', 'error');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
       const savedUser = localStorage.getItem('user_session');
       const user = savedUser ? JSON.parse(savedUser) : null;
       
-      const normalizedPhone = formData.phone.replace(/[^0-9+]/g, '');
-      if (normalizedPhone.replace(/\D/g, '').length < 10) {
-        showToast('Nomor WhatsApp/HP tampaknya belum valid.', 'error');
-        setIsSubmitting(false);
-        return;
-      }
+      const deliveryLabel = deliveryType === 'pickup'
+        ? 'Ambil Langsung di Rumah / Toko (Self Pickup)'
+        : `Kirim via Ekspedisi (${formData.courier})`;
+      
+      const finalAddress = deliveryType === 'pickup'
+        ? `Ambil di Lokasi Penjual (${STORE.location || 'Majalengka, Jawa Barat'})`
+        : formData.address.trim();
 
-      const orderUrl = `https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(`Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*\n*Ukuran (Size):* ${selectedSize || '40'}\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nNo. HP: ${normalizedPhone}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`)}`;
+      const paymentLabel = paymentMethod === 'transfer' ? 'Transfer Bank' : 'Tunai / Cash';
+
+      const orderUrl = `https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(
+        `Halo Admin E STORE, saya ingin membeli produk:\n\n` +
+        `*Produk:* ${product.name}\n` +
+        `*Ukuran (Size):* ${selectedSize || '40'}\n` +
+        `*Harga:* ${formatPrice(product.price)}\n\n` +
+        `*Data Pembeli:*\n` +
+        `*Nama:* ${formData.name.trim()}\n` +
+        `*No. HP/WA:* ${normalizedPhone}\n` +
+        `*Metode Penerimaan:* ${deliveryLabel}\n` +
+        (deliveryType === 'shipping' ? `*Alamat Kirim:* ${formData.address.trim()}\n` : `*Lokasi Pengambilan:* ${STORE.location || 'Majalengka, Jawa Barat'}\n`) +
+        `*Metode Pembayaran:* ${paymentLabel}\n\n` +
+        `Mohon info konfirmasi dan petunjuk selanjutnya ya Kak!`
+      )}`;
 
       const customerOrder = {
         ...(user?.uid ? { userId: user.uid } : {}),
         customerName: formData.name.trim(),
         customerPhone: normalizedPhone,
-        address: formData.address.trim(),
+        address: finalAddress,
         items: [{
           id: product.id,
           name: product.name,
@@ -164,7 +196,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
           image: product.images[0] || ''
         }],
         total: product.price,
-        paymentMethod: formData.courier
+        paymentMethod: `${paymentLabel} (${deliveryType === 'pickup' ? 'Ambil di Toko' : 'Kirim Ekspedisi'})`
       };
       await saveOrder(customerOrder);
 
@@ -174,9 +206,6 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error saving order:', error);
-      const text = `Halo Admin E STORE, saya ingin membeli produk:\n\n*${product.name}*\nHarga: ${formatPrice(product.price)}\n\n*Data Pengiriman:*\nNama: ${formData.name}\nAlamat: ${formData.address}\nKurir: ${formData.courier}\n\nMohon info selanjutnya ya Kak!`;
-      window.open(`https://wa.me/${CONTACT_INFO.whatsapp}?text=${encodeURIComponent(text)}`, '_blank');
-      setShowCheckoutForm(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -450,8 +479,59 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
               </div>
 
               <div className="space-y-6">
+                {/* Delivery Type Switcher */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Nama Lengkap</label>
+                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Metode Penerimaan</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryType('pickup')}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left transition-all flex flex-col gap-1",
+                        deliveryType === 'pickup'
+                          ? "bg-tea-main/10 border-tea-main shadow-xs"
+                          : "bg-white border-black/10 hover:border-black/20"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <Store size={16} className={deliveryType === 'pickup' ? "text-tea-main" : "text-black/40"} />
+                        <span className="text-[10px] font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded-full">Gratis</span>
+                      </div>
+                      <span className="text-xs font-bold text-black">Ambil di Tempat / Toko</span>
+                      <span className="text-[10px] text-black/50">Datang langsung ke lokasi</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryType('shipping')}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left transition-all flex flex-col gap-1",
+                        deliveryType === 'shipping'
+                          ? "bg-tea-main/10 border-tea-main shadow-xs"
+                          : "bg-white border-black/10 hover:border-black/20"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <Truck size={16} className={deliveryType === 'shipping' ? "text-tea-main" : "text-black/40"} />
+                        <span className="text-[10px] text-black/40">Ekspedisi</span>
+                      </div>
+                      <span className="text-xs font-bold text-black">Kirim ke Alamat</span>
+                      <span className="text-[10px] text-black/50">Via kurir pengiriman</span>
+                    </button>
+                  </div>
+                  {deliveryType === 'pickup' && (
+                    <div className="p-3 bg-tea-main/5 border border-tea-main/15 rounded-xl flex items-start gap-2 text-xs text-black/70 mt-1">
+                      <MapPin size={14} className="text-tea-main mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-bold text-black">Lokasi Toko / Rumah Penjual:</p>
+                        <p>{STORE.location || 'Majalengka, Jawa Barat, Indonesia'}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Nama Lengkap *</label>
                   <input 
                     required
                     type="text" 
@@ -459,55 +539,100 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="Masukkan nama Anda"
-                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
+                    className="w-full bg-white border border-black/10 rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Nomor WhatsApp</label>
+                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Nomor WhatsApp (Aktif) *</label>
                   <input 
                     required
                     type="tel" 
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="Contoh: 0812..."
-                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
+                    placeholder="Contoh: 081234567890"
+                    className="w-full bg-white border border-black/10 rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black text-sm"
                   />
                 </div>
+
+                {deliveryType === 'shipping' && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Alamat Lengkap Pengiriman *</label>
+                      <textarea 
+                        required
+                        name="address"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        placeholder="Contoh: Jl. Melati No. 123, Kelurahan, Kecamatan, Kota"
+                        className="w-full bg-white border border-black/10 rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all min-h-[90px] text-black text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Pilihan Kurir</label>
+                      <select 
+                        name="courier"
+                        value={formData.courier}
+                        onChange={handleInputChange}
+                        className="w-full bg-white border border-black/10 rounded-2xl px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black text-sm"
+                      >
+                        <option value="JNE Regular">JNE Regular</option>
+                        <option value="J&T Express">J&T Express</option>
+                        <option value="SiCepat">SiCepat</option>
+                        <option value="GoSend/Grab">GoSend/Grab</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                {/* Payment Method Switcher (TF Bank vs Cash) */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Alamat Lengkap</label>
-                  <textarea 
-                    required
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="Contoh: Jl. Melati No. 123, Jakarta"
-                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all min-h-[120px] text-black"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Pilihan Kurir</label>
-                  <select 
-                    name="courier"
-                    value={formData.courier}
-                    onChange={handleInputChange}
-                    className="w-full bg-white border border-black/10 rounded-2xl px-6 py-4 focus:outline-none focus:ring-2 focus:ring-tea-main/50 transition-all text-black"
-                  >
-                    <option value="JNE">JNE</option>
-                    <option value="J&T">J&T</option>
-                    <option value="SiCepat">SiCepat</option>
-                    <option value="GoSend/Grab">GoSend/Grab</option>
-                  </select>
+                  <label className="text-xs font-bold uppercase tracking-widest opacity-60 text-outline">Metode Pembayaran (Hanya TF Bank / Cash)</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('transfer')}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left transition-all flex items-center gap-2.5",
+                        paymentMethod === 'transfer'
+                          ? "bg-tea-main/10 border-tea-main shadow-xs"
+                          : "bg-white border-black/10 hover:border-black/20"
+                      )}
+                    >
+                      <Building2 size={18} className={paymentMethod === 'transfer' ? "text-tea-main" : "text-black/40"} />
+                      <div>
+                        <p className="text-xs font-bold text-black">Transfer Bank</p>
+                        <p className="text-[10px] text-black/50">BCA / Mandiri / BRI</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('cash')}
+                      className={cn(
+                        "p-3 rounded-2xl border text-left transition-all flex items-center gap-2.5",
+                        paymentMethod === 'cash'
+                          ? "bg-tea-main/10 border-tea-main shadow-xs"
+                          : "bg-white border-black/10 hover:border-black/20"
+                      )}
+                    >
+                      <Banknote size={18} className={paymentMethod === 'cash' ? "text-tea-main" : "text-black/40"} />
+                      <div>
+                        <p className="text-xs font-bold text-black">Tunai / Cash</p>
+                        <p className="text-[10px] text-black/50">Bayar di Tempat</p>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-black text-white py-5 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-tea-main text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:scale-[1.01] transition-transform shadow-lg shadow-tea-main/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? <Loader2 className="animate-spin" size={24} /> : <MessageCircle size={24} />}
-                {isSubmitting ? 'Memproses...' : 'Konfirmasi & Chat Admin'}
+                {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : <MessageCircle size={20} />}
+                {isSubmitting ? 'Memproses...' : 'Pesan & Chat Admin via WhatsApp'}
               </button>
             </motion.form>
           )}

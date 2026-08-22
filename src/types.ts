@@ -94,6 +94,7 @@ export interface InvoiceData {
   customerName: string;
   customerPhone: string;
   customerAddress: string;
+  fulfillmentType?: 'pickup' | 'shipping'; // 'pickup' for Datang Langsung / Ambil di Tempat, 'shipping' for Kirim Ekspedisi
   courier?: string;
   trackingNumber?: string;
   items: InvoiceItem[];
@@ -104,7 +105,7 @@ export interface InvoiceData {
   grandTotal: number;
   paidAmount: number;
   remainingAmount: number;
-  paymentMethod: string;
+  paymentMethod: string; // 'Transfer Bank' | 'Tunai / Cash'
   bankAccountInfo?: string;
   paymentStatus: 'LUNAS' | 'BELUM LUNAS' | 'DP' | 'BATAL';
   notes?: string;

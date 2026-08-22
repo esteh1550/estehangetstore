@@ -5,7 +5,7 @@ import {
   Clock, AlertCircle, RefreshCw, Download, ArrowLeft, Eye, Edit3, 
   Search, ShieldCheck, ShoppingCart, Truck, CreditCard, Building2, 
   User, MapPin, Phone, Calendar, Hash, Tag, Sparkles, Check, X,
-  Save, RotateCcw
+  Save, RotateCcw, Store, Banknote
 } from 'lucide-react';
 import { InvoiceData, InvoiceItem, Product } from '../types';
 import { OrderRecord } from '../lib/storage';
@@ -43,7 +43,7 @@ function generateInvoiceNo(): string {
   return `INV/ESTORE/${y}${m}${d}/${rand}`;
 }
 
-const DEFAULT_BANK_INFO = 'BCA: 123-456-7890 a/n E STORE OFFICIAL\nMandiri: 098-765-4321 a/n E STORE INDONESIA\nQRIS: Tersedia di Kasir / WhatsApp Admin';
+const DEFAULT_BANK_INFO = 'BCA: 123-456-7890 a/n E STORE OFFICIAL\nMandiri: 098-765-4321 a/n E STORE INDONESIA\nBRI: 5678-01-001234-53-0 a/n E STORE\nTunai / Cash: Diterima di Kasir / Toko / Rumah';
 const DEFAULT_NOTES = '1. Produk 100% Original & telah lolos verifikasi Quality Control.\n2. Garansi tukar ukuran (size) berlaku 2x24 jam sejak barang diterima (kondisi baru/tag utuh).\n3. Simpan nota ini sebagai bukti transaksi sah E STORE.';
 
 interface InvoiceMakerProps {
@@ -74,7 +74,8 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
     customerName: '',
     customerPhone: '',
     customerAddress: '',
-    courier: 'JNE Regular',
+    fulfillmentType: 'pickup',
+    courier: 'Ambil di Toko (Self Pickup)',
     trackingNumber: '',
     items: [
       {
@@ -89,11 +90,11 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
       }
     ],
     subtotal: 450000,
-    shippingFee: 20000,
+    shippingFee: 0,
     discountAmount: 0,
     packingFee: 0,
-    grandTotal: 470000,
-    paidAmount: 470000,
+    grandTotal: 450000,
+    paidAmount: 450000,
     remainingAmount: 0,
     paymentMethod: 'Transfer BCA',
     bankAccountInfo: DEFAULT_BANK_INFO,
@@ -131,6 +132,9 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
 
       const sub = items.reduce((s, i) => s + i.subtotal, 0);
       const isPaid = initialOrder.status === 'completed';
+      const isPickup = (initialOrder.paymentMethod || '').toLowerCase().includes('ambil') || 
+                       (initialOrder.address || '').toLowerCase().includes('ambil') ||
+                       (initialOrder.address || '').toLowerCase().includes('lokasi');
 
       setInvoice(prev => ({
         ...prev,
@@ -140,17 +144,18 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
         customerName: initialOrder.customerName || '',
         customerPhone: initialOrder.customerPhone || '',
         customerAddress: initialOrder.address || '',
-        courier: initialOrder.paymentMethod ? `Kurir (${initialOrder.paymentMethod})` : 'JNE Regular',
+        fulfillmentType: isPickup ? 'pickup' : 'shipping',
+        courier: isPickup ? 'Ambil di Toko (Self Pickup)' : (initialOrder.paymentMethod ? `Kurir (${initialOrder.paymentMethod})` : 'JNE Regular'),
         items,
         subtotal: sub,
-        shippingFee: Math.max(0, initialOrder.total - sub),
+        shippingFee: isPickup ? 0 : Math.max(0, initialOrder.total - sub),
         discountAmount: 0,
         packingFee: 0,
         grandTotal: initialOrder.total,
         paidAmount: isPaid ? initialOrder.total : 0,
         remainingAmount: isPaid ? 0 : initialOrder.total,
         paymentStatus: isPaid ? 'LUNAS' : 'BELUM LUNAS',
-        paymentMethod: initialOrder.paymentMethod || 'Transfer Bank',
+        paymentMethod: initialOrder.paymentMethod?.includes('Cash') || initialOrder.paymentMethod?.includes('Tunai') ? 'Tunai / Cash' : 'Transfer Bank',
         createdAt: new Date().toISOString()
       }));
 
@@ -316,28 +321,32 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
         ? `⚠️ *DP (Uang Muka: ${formatPrice(invoice.paidAmount)} | Sisa: ${formatPrice(invoice.remainingAmount)})*`
         : '⏳ *BELUM LUNAS*';
 
+    const isPickup = invoice.fulfillmentType === 'pickup' || (invoice.courier || '').toLowerCase().includes('ambil');
+    const deliverySummary = isPickup 
+      ? `🏠 *Ambil Langsung di Rumah / Toko (Bebas Ongkir)*\nLokasi: ${STORE.location || 'Majalengka, Jawa Barat'}`
+      : `🚚 *Kirim via Ekspedisi:* ${invoice.courier || '-'}${invoice.trackingNumber ? ` (Resi: ${invoice.trackingNumber})` : ''}\nAlamat Kirim: ${invoice.customerAddress || '-'}`;
+
     const text = `🧾 *NOTA PEMBELIAN RESMI - ${invoice.storeName.toUpperCase()}*\n` +
       `No. Nota: *${invoice.invoiceNumber}*\n` +
       `Tanggal: ${invoice.date}\n` +
       `Status Pembayaran: ${statusBadge}\n` +
       `------------------------------------------\n` +
-      `*DATA PENERIMA:*\n` +
-      `Nama: *${invoice.customerName}*\n` +
+      `*DATA PEMBELI & PENERIMAAN:*\n` +
+      `Nama: *${invoice.customerName || 'Pelanggan'}*\n` +
       `No. HP: ${invoice.customerPhone || '-'}\n` +
-      `Alamat: ${invoice.customerAddress || '-'}\n` +
-      `Ekspedisi: ${invoice.courier || '-'}${invoice.trackingNumber ? ` (Resi: ${invoice.trackingNumber})` : ''}\n` +
+      `${deliverySummary}\n` +
       `------------------------------------------\n` +
       `*RINCIAN PRODUK:*\n${itemsText}\n` +
       `------------------------------------------\n` +
       `Subtotal: ${formatPrice(invoice.subtotal)}\n` +
-      (invoice.shippingFee > 0 ? `Ongkos Kirim: ${formatPrice(invoice.shippingFee)}\n` : '') +
+      (invoice.shippingFee > 0 ? `Ongkos Kirim: ${formatPrice(invoice.shippingFee)}\n` : (isPickup ? `Ongkos Kirim: Rp 0 (Bebas Ongkir / Ambil di Toko)\n` : '')) +
       (invoice.packingFee && invoice.packingFee > 0 ? `Biaya Packing/Asuransi: ${formatPrice(invoice.packingFee)}\n` : '') +
       (invoice.discountAmount > 0 ? `Diskon Potongan: -${formatPrice(invoice.discountAmount)}\n` : '') +
       `*TOTAL AKHIR: ${formatPrice(invoice.grandTotal)}*\n` +
       `------------------------------------------\n` +
-      `Metode: ${invoice.paymentMethod}\n\n` +
+      `Metode Bayar: *${invoice.paymentMethod}*\n\n` +
       `*Rekening Pembayaran E STORE:*\n${invoice.bankAccountInfo || DEFAULT_BANK_INFO}\n\n` +
-      `_Terima kasih telah berbelanja di ${invoice.storeName}! Simpan bukti nota ini untuk garansi produk._`;
+      `_Terima kasih telah bertransaksi di ${invoice.storeName}! Simpan bukti nota ini untuk garansi produk._`;
 
     const targetPhone = invoice.customerPhone.replace(/[^0-9]/g, '') || CONTACT_INFO.whatsapp.replace(/[^0-9]/g, '');
     const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`;
@@ -350,7 +359,12 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
       `${idx + 1}. ${it.name} (Size: ${it.size || '-'}) - ${it.quantity}x @ ${formatPrice(it.price)} = ${formatPrice(it.subtotal)}`
     ).join('\n');
 
-    const text = `NOTA PEMBELIAN ${invoice.storeName}\nNo: ${invoice.invoiceNumber}\nTgl: ${invoice.date}\nStatus: ${invoice.paymentStatus}\n\nPembeli: ${invoice.customerName} (${invoice.customerPhone})\nAlamat: ${invoice.customerAddress}\n\nItem:\n${itemsText}\n\nSubtotal: ${formatPrice(invoice.subtotal)}\nOngkir: ${formatPrice(invoice.shippingFee)}\nDiskon: -${formatPrice(invoice.discountAmount)}\nTOTAL: ${formatPrice(invoice.grandTotal)}\n\nMetode: ${invoice.paymentMethod}`;
+    const isPickup = invoice.fulfillmentType === 'pickup' || (invoice.courier || '').toLowerCase().includes('ambil');
+    const deliverySummary = isPickup 
+      ? `Penerimaan: Ambil di Toko / Rumah (Majalengka)`
+      : `Penerimaan: Kirim (${invoice.courier || '-'})\nAlamat: ${invoice.customerAddress || '-'}`;
+
+    const text = `NOTA PEMBELIAN ${invoice.storeName}\nNo: ${invoice.invoiceNumber}\nTgl: ${invoice.date}\nStatus: ${invoice.paymentStatus}\n\nPembeli: ${invoice.customerName} (${invoice.customerPhone})\n${deliverySummary}\n\nItem:\n${itemsText}\n\nSubtotal: ${formatPrice(invoice.subtotal)}\nOngkir: ${isPickup ? 'Rp 0 (Pickup)' : formatPrice(invoice.shippingFee)}\nDiskon: -${formatPrice(invoice.discountAmount)}\nTOTAL: ${formatPrice(invoice.grandTotal)}\n\nMetode: ${invoice.paymentMethod}`;
     
     navigator.clipboard.writeText(text);
     showToast('Teks ringkasan nota berhasil disalin ke clipboard!', 'success');
@@ -533,9 +547,67 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
 
             {/* Customer Info */}
             <div className="bg-white p-6 sm:p-8 rounded-3xl border border-black/5 shadow-sm space-y-6">
-              <h3 className="font-bold text-base text-black flex items-center gap-2 border-b border-black/5 pb-4">
-                <User size={18} className="text-tea-main" /> Data Pembeli & Pengiriman
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/5 pb-4">
+                <h3 className="font-bold text-base text-black flex items-center gap-2">
+                  <User size={18} className="text-tea-main" /> Data Pembeli & Metode Pengiriman
+                </h3>
+              </div>
+
+              {/* Fulfillment Switcher */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Tipe Penerimaan Barang</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInvoice(prev => ({
+                        ...prev,
+                        fulfillmentType: 'pickup',
+                        courier: 'Ambil di Toko (Self Pickup)',
+                        shippingFee: 0,
+                        grandTotal: prev.subtotal - prev.discountAmount + (prev.packingFee || 0),
+                        paidAmount: prev.paymentStatus === 'LUNAS' ? (prev.subtotal - prev.discountAmount + (prev.packingFee || 0)) : prev.paidAmount,
+                        remainingAmount: prev.paymentStatus === 'LUNAS' ? 0 : (prev.subtotal - prev.discountAmount + (prev.packingFee || 0) - prev.paidAmount)
+                      }));
+                    }}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all flex items-center gap-2.5",
+                      invoice.fulfillmentType === 'pickup'
+                        ? "bg-tea-main/10 border-tea-main shadow-xs"
+                        : "bg-black/[0.02] border-black/5 hover:border-black/20"
+                    )}
+                  >
+                    <Store size={18} className={invoice.fulfillmentType === 'pickup' ? "text-tea-main" : "text-black/40"} />
+                    <div>
+                      <p className="text-xs font-bold text-black">Ambil di Rumah / Toko</p>
+                      <p className="text-[10px] text-green-700 font-semibold">Bebas Ongkir (Pickup)</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInvoice(prev => ({
+                        ...prev,
+                        fulfillmentType: 'shipping',
+                        courier: prev.courier && prev.courier !== 'Ambil di Toko (Self Pickup)' ? prev.courier : 'JNE Regular'
+                      }));
+                    }}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all flex items-center gap-2.5",
+                      invoice.fulfillmentType === 'shipping'
+                        ? "bg-tea-main/10 border-tea-main shadow-xs"
+                        : "bg-black/[0.02] border-black/5 hover:border-black/20"
+                    )}
+                  >
+                    <Truck size={18} className={invoice.fulfillmentType === 'shipping' ? "text-tea-main" : "text-black/40"} />
+                    <div>
+                      <p className="text-xs font-bold text-black">Kirim via Ekspedisi</p>
+                      <p className="text-[10px] text-black/50">Kurir Pengiriman</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -561,37 +633,43 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                 </div>
 
                 <div className="sm:col-span-2 space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Alamat Lengkap Tujuan</label>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">
+                    {invoice.fulfillmentType === 'pickup' ? 'Catatan Lokasi / Pengambilan' : 'Alamat Lengkap Pengiriman'}
+                  </label>
                   <textarea
                     rows={2}
-                    placeholder="Contoh: Jl. Pahlawan No. 45, RT 02/05, Majalengka, Jawa Barat"
+                    placeholder={invoice.fulfillmentType === 'pickup' ? "Ambil langsung di tempat: Majalengka / Janjian di Rumah Penjual" : "Contoh: Jl. Pahlawan No. 45, RT 02/05, Majalengka, Jawa Barat"}
                     value={invoice.customerAddress}
                     onChange={(e) => setInvoice({ ...invoice, customerAddress: e.target.value })}
                     className="w-full bg-black/5 border border-black/5 rounded-xl px-3.5 py-2.5 text-xs font-medium text-black focus:outline-none focus:ring-2 focus:ring-tea-main"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Ekspedisi / Kurir</label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: JNE REG / J&T Express / GoSend / Ambil di Toko"
-                    value={invoice.courier || ''}
-                    onChange={(e) => setInvoice({ ...invoice, courier: e.target.value })}
-                    className="w-full bg-black/5 border border-black/5 rounded-xl px-3.5 py-2.5 text-xs font-medium text-black focus:outline-none focus:ring-2 focus:ring-tea-main"
-                  />
-                </div>
+                {invoice.fulfillmentType === 'shipping' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Ekspedisi / Kurir</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: JNE Regular / J&T Express / SiCepat"
+                        value={invoice.courier || ''}
+                        onChange={(e) => setInvoice({ ...invoice, courier: e.target.value })}
+                        className="w-full bg-black/5 border border-black/5 rounded-xl px-3.5 py-2.5 text-xs font-medium text-black focus:outline-none focus:ring-2 focus:ring-tea-main"
+                      />
+                    </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Nomor Resi (Opsional)</label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: JNE1234567890"
-                    value={invoice.trackingNumber || ''}
-                    onChange={(e) => setInvoice({ ...invoice, trackingNumber: e.target.value })}
-                    className="w-full bg-black/5 border border-black/5 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-black focus:outline-none focus:ring-2 focus:ring-tea-main"
-                  />
-                </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Nomor Resi (Opsional)</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: JNE1234567890"
+                        value={invoice.trackingNumber || ''}
+                        onChange={(e) => setInvoice({ ...invoice, trackingNumber: e.target.value })}
+                        className="w-full bg-black/5 border border-black/5 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-black focus:outline-none focus:ring-2 focus:ring-tea-main"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -795,11 +873,41 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                   </div>
                 )}
 
-                <div className="space-y-1 pt-2">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Metode Pembayaran</label>
+                <div className="space-y-2 pt-2">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-black/50">Metode Pembayaran (Hanya TF Bank / Cash)</label>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setInvoice(prev => ({ ...prev, paymentMethod: 'Transfer BCA' }))}
+                      className={cn(
+                        "p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2",
+                        invoice.paymentMethod?.includes('Transfer') || invoice.paymentMethod?.includes('BCA') || invoice.paymentMethod?.includes('Mandiri') || invoice.paymentMethod?.includes('BRI')
+                          ? "bg-tea-main/10 border-tea-main text-black"
+                          : "bg-black/[0.02] border-black/5 text-black/60 hover:text-black"
+                      )}
+                    >
+                      <Building2 size={16} className="text-tea-main shrink-0" />
+                      <span>Transfer Bank</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setInvoice(prev => ({ ...prev, paymentMethod: 'Tunai / Cash' }))}
+                      className={cn(
+                        "p-2.5 rounded-xl border text-left text-xs font-bold transition-all flex items-center gap-2",
+                        invoice.paymentMethod?.includes('Cash') || invoice.paymentMethod?.includes('Tunai')
+                          ? "bg-tea-main/10 border-tea-main text-black"
+                          : "bg-black/[0.02] border-black/5 text-black/60 hover:text-black"
+                      )}
+                    >
+                      <Banknote size={16} className="text-tea-main shrink-0" />
+                      <span>Tunai / Cash</span>
+                    </button>
+                  </div>
+
                   <input
                     type="text"
-                    placeholder="e.g. Transfer BCA / QRIS / Cash"
+                    placeholder="e.g. Transfer BCA / Mandiri / BRI / Tunai"
                     value={invoice.paymentMethod}
                     onChange={(e) => setInvoice({ ...invoice, paymentMethod: e.target.value })}
                     className="w-full bg-black/5 border border-black/5 rounded-xl px-3 py-2 text-xs font-medium text-black focus:outline-none focus:ring-2 focus:ring-tea-main"
@@ -991,16 +1099,28 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                     <span className="text-[10px] font-bold uppercase tracking-wider text-black/40">DITAGIHKAN KEPADA:</span>
                     <h3 className="font-bold text-base text-black">{invoice.customerName || 'Pelanggan Terhormat'}</h3>
                     {invoice.customerPhone && <p className="text-xs text-black/70 font-semibold">{invoice.customerPhone}</p>}
-                    <p className="text-xs text-black/60 leading-relaxed max-w-sm">{invoice.customerAddress || 'Alamat tidak dicantumkan'}</p>
+                    <p className="text-xs text-black/60 leading-relaxed max-w-sm">
+                      {invoice.customerAddress || (invoice.fulfillmentType === 'pickup' ? `Ambil di Tempat / Rumah Toko (${invoice.storeAddress})` : 'Alamat tidak dicantumkan')}
+                    </p>
                   </div>
 
                   <div className="space-y-1 text-left sm:text-right">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-black/40">PENGIRIMAN & PEMBAYARAN:</span>
-                    <p className="text-xs text-black">Ekspedisi: <strong>{invoice.courier || 'Kurir Toko'}</strong></p>
-                    {invoice.trackingNumber && (
+                    <div className="flex sm:justify-end items-center gap-1.5 pt-0.5">
+                      {invoice.fulfillmentType === 'pickup' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200">
+                          <Store size={11} /> Ambil di Toko (Self Pickup)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          <Truck size={11} /> Ekspedisi: {invoice.courier || 'Kurir'}
+                        </span>
+                      )}
+                    </div>
+                    {invoice.fulfillmentType === 'shipping' && invoice.trackingNumber && (
                       <p className="text-xs font-mono text-black font-bold">No. Resi: {invoice.trackingNumber}</p>
                     )}
-                    <p className="text-xs text-black">Metode Bayar: <strong>{invoice.paymentMethod}</strong></p>
+                    <p className="text-xs text-black pt-1">Metode Bayar: <strong>{invoice.paymentMethod}</strong></p>
                   </div>
                 </div>
 
@@ -1141,6 +1261,7 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                     <span>{invoice.date}</span>
                   </div>
                   <div>Cust: <strong>{invoice.customerName || 'Pelanggan'}</strong> ({invoice.customerPhone || '-'})</div>
+                  <div>Pengambilan: <strong>{invoice.fulfillmentType === 'pickup' ? 'Ambil di Toko/Rumah (Pickup)' : `Kirim (${invoice.courier || 'Ekspedisi'})`}</strong></div>
                   <div>Status: <strong>{invoice.paymentStatus}</strong></div>
                 </div>
 
