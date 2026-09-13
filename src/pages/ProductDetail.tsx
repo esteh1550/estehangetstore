@@ -1,10 +1,14 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, Eye, X, Store, Truck, Building2, Banknote, MapPin } from 'lucide-react';
+import { 
+  ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, 
+  Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, 
+  Eye, X, Store, Truck, Building2, Banknote, MapPin, Youtube, Play, Video, Film
+} from 'lucide-react';
 import { saveOrder } from '../lib/storage';
 import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
-import { formatPrice, cn } from '../lib/utils';
+import { formatPrice, cn, getYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '../lib/utils';
 import { Product, Review } from '../types';
 import Modal from '../components/Modal';
 import { getProduct, addReview, getReviewsByProduct, incrementProductView, uploadImage } from '../lib/sellerService';
@@ -25,6 +29,9 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
   const [loading, setLoading] = React.useState(true);
   
   const [activeImage, setActiveImage] = React.useState(0);
+  const [mediaMode, setMediaMode] = React.useState<'image' | 'video'>('image');
+  const [showVideoModal, setShowVideoModal] = React.useState(false);
+  const videoSectionRef = React.useRef<HTMLDivElement>(null);
   const [zoomImage, setZoomImage] = React.useState<string | null>(null);
   const [showCheckoutForm, setShowCheckoutForm] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -267,46 +274,126 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
       </button>
 
       <div className="flex flex-col lg:flex-row gap-12">
-        {/* Images */}
+        {/* Images & Video Media Gallery */}
         <div className="lg:w-1/2 space-y-4">
-          <div 
-            onClick={() => setZoomImage(product.images[activeImage])}
-            className="aspect-square rounded-3xl overflow-hidden bg-white border border-black/5 flex items-center justify-center p-8 shadow-xl cursor-zoom-in group relative"
-          >
-            <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white p-2.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-xs font-bold shadow-md z-10">
-              <Eye size={14} /> Zoom
-            </div>
-            <AnimatePresence mode="wait">
-              <motion.img
-                key={activeImage}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                src={product.images[activeImage]}
-                alt={product.name}
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                loading="eager"
-                decoding="async"
-                referrerPolicy="no-referrer"
-              />
-            </AnimatePresence>
-          </div>
-          {product.images.length > 1 && (
-            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-              {product.images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveImage(i)}
-                  className={cn(
-                    "w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 shadow-sm",
-                    activeImage === i ? "border-black scale-105" : "border-transparent opacity-50 hover:opacity-100"
-                  )}
-                >
-                  <img src={img} alt={`${product.name} ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
-                </button>
-              ))}
+          {product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMediaMode('image')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs",
+                  mediaMode === 'image'
+                    ? "bg-black text-white shadow-sm"
+                    : "bg-white text-black/60 hover:text-black border border-black/10"
+                )}
+              >
+                <Eye size={14} /> Foto ({product.images.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaMode('video')}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs",
+                  mediaMode === 'video'
+                    ? "bg-red-600 text-white shadow-sm"
+                    : "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                )}
+              >
+                <Youtube size={14} className={mediaMode === 'video' ? "fill-white text-white" : "fill-red-600 text-red-600"} />
+                Video Preview (YouTube)
+              </button>
             </div>
           )}
+
+          {/* Main Media Box */}
+          {mediaMode === 'video' && product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) ? (
+            <div className="aspect-square rounded-3xl overflow-hidden bg-black border border-black/10 flex flex-col justify-center shadow-xl relative group">
+              <iframe
+                src={getYouTubeEmbedUrl(product.youtubeUrl, true) || ''}
+                title={`Video Preview ${product.name}`}
+                className="w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+              <div className="absolute top-4 left-4 bg-red-600/90 backdrop-blur-sm text-white px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md pointer-events-none">
+                <Youtube size={14} className="fill-white text-white" /> YouTube Video
+              </div>
+            </div>
+          ) : (
+            <div 
+              onClick={() => setZoomImage(product.images[activeImage])}
+              className="aspect-square rounded-3xl overflow-hidden bg-white border border-black/5 flex items-center justify-center p-8 shadow-xl cursor-zoom-in group relative"
+            >
+              <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm text-white p-2.5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 text-xs font-bold shadow-md z-10">
+                <Eye size={14} /> Zoom
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={activeImage}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  src={product.images[activeImage]}
+                  alt={product.name}
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                  loading="eager"
+                  decoding="async"
+                  referrerPolicy="no-referrer"
+                />
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Thumbnails (Photos + Video) */}
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            {product.images.map((img, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setActiveImage(i);
+                  setMediaMode('image');
+                }}
+                className={cn(
+                  "w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 shadow-xs relative",
+                  mediaMode === 'image' && activeImage === i 
+                    ? "border-black scale-105 shadow-sm" 
+                    : "border-black/10 opacity-60 hover:opacity-100"
+                )}
+              >
+                <img src={img} alt={`${product.name} ${i}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
+              </button>
+            ))}
+
+            {/* Video Thumbnail Button */}
+            {product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) && (
+              <button
+                type="button"
+                onClick={() => setMediaMode('video')}
+                className={cn(
+                  "w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 shadow-xs relative group bg-black",
+                  mediaMode === 'video' 
+                    ? "border-red-600 scale-105 ring-2 ring-red-500/30" 
+                    : "border-red-300/80 opacity-85 hover:opacity-100"
+                )}
+                title="Putar Video Preview YouTube"
+              >
+                <img 
+                  src={getYouTubeThumbnailUrl(product.youtubeUrl) || product.images[0]} 
+                  alt="YouTube Preview Thumbnail" 
+                  className="w-full h-full object-cover opacity-50 group-hover:opacity-40 transition-opacity"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                  <div className="w-7 h-7 rounded-full bg-red-600 flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                    <Play size={14} className="fill-white text-white translate-x-0.5" />
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-wider mt-1 text-red-200">Video YT</span>
+                </div>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Info */}
@@ -333,18 +420,16 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                       {product.shoeType}
                     </span>
                   )}
-                  {product.stock !== undefined && (
-                    <span className={cn(
-                      "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                      product.stock === 0 ? "bg-red-600 text-white shadow-sm animate-pulse" : 
-                      product.stock <= 5 ? "bg-orange-500 text-white" : 
-                      "bg-green-500/10 text-green-600"
-                    )}>
-                      {product.stock === 0 ? "SOLD" : 
-                       product.stock <= 5 ? `Stok Menipis (Sisa ${product.stock})` : 
-                       "Tersedia"}
-                    </span>
-                  )}
+                  <span className={cn(
+                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                    (product.stock !== undefined ? product.stock : 1) === 0 
+                      ? "bg-red-600 text-white shadow-sm animate-pulse" 
+                      : "bg-orange-500 text-white"
+                  )}>
+                    {(product.stock !== undefined ? product.stock : 1) === 0 
+                      ? "SOLD OUT" 
+                      : "Stok: 1 Pasang (Eksklusif)"}
+                  </span>
                 </div>
                 <h1 className={cn(
                   "text-4xl md:text-5xl font-display font-bold tracking-tighter text-outline",
@@ -363,11 +448,28 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <button onClick={() => handleShare('wa')} className="p-3 bg-[#25D366] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><MessageCircle size={18} /></button>
-                <button onClick={() => handleShare('fb')} className="p-3 bg-[#1877F2] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><Facebook size={18} /></button>
-                <button onClick={() => handleShare('tw')} className="p-3 bg-[#1DA1F2] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><Twitter size={18} /></button>
-                <button onClick={() => handleShare('copy')} className="p-3 bg-black text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><LinkIcon size={18} /></button>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleShare('wa')} className="p-3 bg-[#25D366] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><MessageCircle size={18} /></button>
+                  <button onClick={() => handleShare('fb')} className="p-3 bg-[#1877F2] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><Facebook size={18} /></button>
+                  <button onClick={() => handleShare('tw')} className="p-3 bg-[#1DA1F2] text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><Twitter size={18} /></button>
+                  <button onClick={() => handleShare('copy')} className="p-3 bg-black text-white rounded-xl hover:scale-110 transition-transform shadow-lg"><LinkIcon size={18} /></button>
+                </div>
+
+                {product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMediaMode('video');
+                      videoSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-xs"
+                  >
+                    <Youtube size={16} className="text-red-600 fill-red-600" />
+                    <span>Tonton Video Review</span>
+                    <Play size={12} className="fill-red-600 ml-0.5" />
+                  </button>
+                )}
               </div>
 
               <div className="space-y-4">
@@ -638,6 +740,51 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
           )}
         </div>
       </div>
+
+      {/* Dedicated YouTube Video Preview Section */}
+      {product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) && (
+        <div ref={videoSectionRef} className="mt-16 bg-white p-6 sm:p-10 rounded-3xl border border-black/5 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-black/5 pb-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 bg-red-600 text-white rounded-2xl shadow-md">
+                  <Youtube size={24} className="fill-white text-white" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-display font-black text-black">
+                    Video Preview & Review Produk
+                  </h3>
+                  <p className="text-xs text-black/40 font-mono">
+                    YouTube ID: {getYouTubeVideoId(product.youtubeUrl)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-black/60 pt-1">
+                Tonton preview nyata, unboxing, dan review produk <strong>{product.name}</strong> langsung melalui video YouTube di bawah ini.
+              </p>
+            </div>
+
+            <a
+              href={product.youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all shadow-xs shrink-0 self-start sm:self-auto"
+            >
+              <Youtube size={16} className="text-red-600" /> Buka di YouTube App/Web
+            </a>
+          </div>
+
+          <div className="aspect-video w-full rounded-2xl sm:rounded-3xl overflow-hidden bg-black shadow-xl border border-black/10">
+            <iframe
+              src={getYouTubeEmbedUrl(product.youtubeUrl) || ''}
+              title={`Video Review ${product.name}`}
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (

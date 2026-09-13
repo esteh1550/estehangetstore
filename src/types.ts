@@ -29,8 +29,10 @@ export interface Product {
   storeId: string;
   views?: number;
   isRecommended?: boolean;
+  youtubeUrl?: string;
   ownerUid?: string;
   createdAt?: any;
+  updatedAt?: any;
 }
 
 export interface CartItem extends Product {

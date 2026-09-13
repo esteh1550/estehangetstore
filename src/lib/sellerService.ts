@@ -28,6 +28,16 @@ const ensureAuth = () => {
 
 export const MAIN_STORE_ID = 'estehanget-store';
 
+// Helper: Memastikan setiap produk selalu pasti memiliki stok 1 (atau 0 jika barang berstatus SOLD)
+export const ensureProductStock = (p: Product): Product => {
+  const rawStock = Number(p.stock);
+  const stock = Number.isFinite(rawStock) ? (rawStock === 0 ? 0 : 1) : 1;
+  return {
+    ...p,
+    stock
+  };
+};
+
 // --- Local Storage Fallback Helpers ---
 const STORAGE_PREFIX = 'estehanget_';
 const getLocalData = <T>(key: string): T[] => {
@@ -35,12 +45,17 @@ const getLocalData = <T>(key: string): T[] => {
     const raw = localStorage.getItem(STORAGE_PREFIX + key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed as T[];
+      if (Array.isArray(parsed)) {
+        if (key === 'products') {
+          return (parsed as Product[]).map(ensureProductStock) as unknown as T[];
+        }
+        return parsed as T[];
+      }
     }
   } catch (e) {
     console.error("Error reading local storage", e);
   }
-  if (key === 'products') return PRODUCTS as unknown as T[];
+  if (key === 'products') return (PRODUCTS as Product[]).map(ensureProductStock) as unknown as T[];
   return [];
 };
 const setLocalData = <T>(key: string, data: T[]) => localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(data));
@@ -152,12 +167,16 @@ export const getMyStore = (callback: (store: Store | null) => void) => {
 };
 
 export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt'>) => {
+  const finalData = {
+    ...productData,
+    stock: productData.stock === 0 ? 0 : 1, // Pastikan stok selalu 1 (atau 0 jika SOLD)
+  };
   if (isFirebaseEnabled && db) {
     try {
       ensureAuth();
       const prodRef = collection(db, 'products');
       const docRef = await addDoc(prodRef, {
-        ...productData,
+        ...finalData,
         storeId: MAIN_STORE_ID,
         createdAt: serverTimestamp(),
       });
@@ -169,17 +188,21 @@ export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt'>)
 
   // Fallback
   const products = getLocalData<Product>('products');
-  const newProduct = { ...productData, id: `prod_${Date.now()}`, storeId: MAIN_STORE_ID, createdAt: new Date().toISOString() as any };
+  const newProduct = ensureProductStock({ ...finalData, id: `prod_${Date.now()}`, storeId: MAIN_STORE_ID, createdAt: new Date().toISOString() as any });
   setLocalData('products', [newProduct, ...products]);
   return newProduct.id;
 };
 
 export const updateProduct = async (productId: string, productData: Partial<Product>) => {
+  const payload = { ...productData };
+  if (payload.stock !== undefined) {
+    payload.stock = payload.stock === 0 ? 0 : 1;
+  }
   if (isFirebaseEnabled && db) {
     try {
       ensureAuth();
       const prodRef = doc(db, 'products', productId);
-      await updateDoc(prodRef, { ...productData, updatedAt: serverTimestamp() });
+      await updateDoc(prodRef, { ...payload, updatedAt: serverTimestamp() });
       return;
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `products/${productId}`);
@@ -188,7 +211,7 @@ export const updateProduct = async (productId: string, productData: Partial<Prod
 
   // Fallback
   const products = getLocalData<Product>('products');
-  const updated = products.map(p => p.id === productId ? { ...p, ...productData, updatedAt: new Date().toISOString() as any } : p);
+  const updated = products.map(p => p.id === productId ? ensureProductStock({ ...p, ...payload, updatedAt: new Date().toISOString() as any }) : p);
   setLocalData('products', updated);
 };
 
@@ -213,7 +236,7 @@ export const getMyProducts = (callback: (products: Product[]) => void) => {
   if (isFirebaseEnabled && db) {
     const q = query(collection(db, 'products'), where('storeId', '==', MAIN_STORE_ID));
     return onSnapshot(q, (snap) => {
-      const prods = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      const prods = snap.docs.map(doc => ensureProductStock({ id: doc.id, ...doc.data() } as Product));
       // Sort client-side to avoid mandatory composite index requirement
       prods.sort((a, b) => {
         const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt as any);
@@ -225,7 +248,7 @@ export const getMyProducts = (callback: (products: Product[]) => void) => {
   }
 
   // Fallback
-  callback(getLocalData<Product>('products'));
+  callback(getLocalData<Product>('products').map(ensureProductStock));
   return () => {};
 };
 
@@ -233,12 +256,12 @@ export const getAllProducts = (callback: (products: Product[]) => void) => {
   if (isFirebaseEnabled && db) {
     const q = query(collection(db, 'products'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, (snap) => {
-      callback(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      callback(snap.docs.map(doc => ensureProductStock({ id: doc.id, ...doc.data() } as Product)));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'products_all'));
   }
 
   // Fallback
-  callback(getLocalData<Product>('products'));
+  callback(getLocalData<Product>('products').map(ensureProductStock));
   return () => {};
 };
 
@@ -271,12 +294,13 @@ export const getProduct = async (productId: string): Promise<Product | null> => 
   if (isFirebaseEnabled && db) {
     try {
       const snap = await getDoc(doc(db, 'products', productId));
-      return snap.exists() ? { id: snap.id, ...snap.data() } as Product : null;
+      return snap.exists() ? ensureProductStock({ id: snap.id, ...snap.data() } as Product) : null;
     } catch (e) {
       handleFirestoreError(e, OperationType.GET, `products/${productId}`);
     }
   }
-  return getLocalData<Product>('products').find(p => p.id === productId) || null;
+  const found = getLocalData<Product>('products').find(p => p.id === productId);
+  return found ? ensureProductStock(found) : null;
 };
 
 export const incrementProductView = async (productId: string) => {
@@ -293,12 +317,38 @@ export const getProductsByStore = async (storeId: string): Promise<Product[]> =>
     try {
       const q = query(collection(db, 'products'), where('storeId', '==', storeId));
       const snap = await getDocs(q);
-      return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      return snap.docs.map(doc => ensureProductStock({ id: doc.id, ...doc.data() } as Product));
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, `stores/${storeId}/products`);
     }
   }
-  return getLocalData<Product>('products').filter(p => p.storeId === storeId);
+  return getLocalData<Product>('products').filter(p => p.storeId === storeId).map(ensureProductStock);
+};
+
+// Sinkronisasi massal: Setel semua stok produk menjadi 1
+export const syncAllProductsStockToOne = async (): Promise<number> => {
+  let updatedCount = 0;
+  if (isFirebaseEnabled && db) {
+    try {
+      ensureAuth();
+      const snap = await getDocs(collection(db, 'products'));
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        if (data.stock !== 1) {
+          await updateDoc(doc(db, 'products', docSnap.id), { stock: 1 });
+          updatedCount++;
+        }
+      }
+    } catch (e) {
+      console.warn("Firestore bulk stock sync warning:", e);
+    }
+  }
+
+  // Update local storage
+  const localProducts = getLocalData<Product>('products');
+  const updated = localProducts.map(p => ({ ...p, stock: 1 }));
+  setLocalData('products', updated);
+  return updatedCount;
 };
 
 // --- Review Services ---

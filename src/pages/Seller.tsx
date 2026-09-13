@@ -24,7 +24,11 @@ import {
   Link as LinkIcon,
   Wand2,
   ShieldAlert,
-  Share2
+  Share2,
+  Youtube,
+  Play,
+  Video,
+  CheckCircle
 } from 'lucide-react';
 import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
@@ -37,10 +41,11 @@ import {
   deleteProduct, 
   getMyProducts,
   uploadImage,
-  MAIN_STORE_ID
+  MAIN_STORE_ID,
+  syncAllProductsStockToOne
 } from '../lib/sellerService';
 import { Store, Product } from '../types';
-import { cn, formatPrice } from '../lib/utils';
+import { cn, formatPrice, getYouTubeVideoId, getYouTubeEmbedUrl } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
 import InvoiceMaker from '../components/InvoiceMaker';
@@ -61,6 +66,22 @@ export default function Seller() {
   const [isImportingLink, setIsImportingLink] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   const [successProductId, setSuccessProductId] = React.useState<string | null>(null);
+  const [isSyncingStock, setIsSyncingStock] = React.useState(false);
+
+  const handleSyncStock = async () => {
+    if (!confirm('Pastikan dan setel semua produk agar pasti memiliki stok 1?')) return;
+    setIsSyncingStock(true);
+    try {
+      await syncAllProductsStockToOne();
+      getMyProducts(setProducts);
+      alert('Berhasil! Semua stok produk telah dipastikan menjadi 1.');
+    } catch (err: any) {
+      console.error(err);
+      alert('Gagal menyinkronkan stok.');
+    } finally {
+      setIsSyncingStock(false);
+    }
+  };
   
   const navigate = useNavigate();
 
@@ -277,8 +298,20 @@ export default function Seller() {
               className="space-y-6"
             >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <h2 className="text-xl font-bold text-black">Daftar Produk</h2>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div>
+                  <h2 className="text-xl font-bold text-black">Daftar Produk</h2>
+                  <p className="text-xs text-black/50">Setiap produk di toko ini memiliki stok 1 (sistem 1 pasang/barang unik)</p>
+                </div>
+                <div className="flex items-center flex-wrap gap-2 w-full sm:w-auto">
+                  <button 
+                    onClick={handleSyncStock}
+                    disabled={isSyncingStock}
+                    title="Pastikan semua stok produk bernilai 1"
+                    className="flex-1 sm:flex-none bg-emerald-50 text-emerald-700 px-3.5 py-2 rounded-xl flex items-center justify-center gap-1.5 font-bold hover:bg-emerald-100 transition-all border border-emerald-200 text-xs shadow-xs"
+                  >
+                    {isSyncingStock ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle size={15} className="text-emerald-600" />}
+                    <span>Setel Semua Stok = 1</span>
+                  </button>
                   <button 
                     onClick={() => setIsImportingLink(true)}
                     className="flex-1 sm:flex-none bg-black/5 text-black px-4 py-2 rounded-xl flex items-center justify-center gap-2 font-bold hover:bg-black/10 transition-all border border-black/5"
@@ -571,11 +604,23 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
           <h4 className="font-bold text-black truncate hover:text-tea-main transition-colors">{product.name}</h4>
         </Link>
         <p className="text-tea-main font-bold">{formatPrice(product.price)}</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 px-2 py-1 rounded-lg text-black/40">
             {product.category}
           </span>
-          <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 uppercase tracking-widest">
+          <span className={cn(
+            "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border",
+            product.stock === 0 ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+          )}>
+            {product.stock === 0 ? "SOLD (0)" : "Stok: 1 (Ready)"}
+          </span>
+          {product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg">
+              <Youtube size={12} className="text-red-600" />
+              <span>Video YT</span>
+            </span>
+          )}
+          <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 uppercase tracking-widest ml-auto">
             <Eye size={10} />
             <span>{product.views || 0} views</span>
           </div>
@@ -699,12 +744,13 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
   const [formData, setFormData] = React.useState({
     name: initialData?.name || '',
     price: initialData?.price || 0,
-    stock: initialData?.stock || 10,
+    stock: initialData?.stock !== undefined ? (initialData.stock === 0 ? 0 : 1) : 1,
     category: initialData?.category || 'sepatu',
     brand: initialData?.brand || 'Nike',
     shoeModel: initialData?.shoeModel || 'Sepatu Kasual / Lifestyle',
     shoeType: initialData?.shoeType || 'Sneakers Low-top',
     sizes: initialData?.sizes || ['38', '39', '40', '41', '42', '43', '44'],
+    youtubeUrl: initialData?.youtubeUrl || '',
     description: initialData?.description || '',
     specifications: Array.isArray(initialData?.specifications) 
       ? initialData.specifications.join('\n') 
@@ -803,7 +849,8 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         ...formData,
         storeId,
         images: finalImages,
-        specifications: specs
+        specifications: specs,
+        youtubeUrl: formData.youtubeUrl.trim()
       };
 
       let newId = '';
@@ -897,17 +944,56 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-black/40">Stok Barang</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-widest text-black/40">Stok Barang</label>
+              <span className="text-[10px] font-black uppercase tracking-wider bg-tea-main/10 text-tea-main px-2.5 py-0.5 rounded-full">
+                Sistem 1 Barang (Stok: 1)
+              </span>
+            </div>
             <div className="relative">
               <Package className="absolute left-4 top-1/2 -translate-y-1/2 text-black/20" size={18} />
               <input
                 required
                 type="number"
-                className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black font-medium"
+                min="0"
+                max="1"
+                className="w-full bg-black/5 border-2 border-transparent focus:border-tea-main rounded-2xl pl-12 pr-4 py-4 text-sm transition-all text-black font-bold"
                 value={formData.stock}
-                onChange={e => setFormData({ ...formData, stock: Number(e.target.value) })}
+                onChange={e => {
+                  const val = Math.max(0, Math.min(1, Number(e.target.value)));
+                  setFormData({ ...formData, stock: val });
+                }}
               />
             </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, stock: 1 })}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5",
+                  formData.stock === 1 
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-sm" 
+                    : "bg-white text-black/60 border-black/10 hover:border-black/20"
+                )}
+              >
+                <span>✓ Tersedia (Stok: 1)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, stock: 0 })}
+                className={cn(
+                  "px-3 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1.5",
+                  formData.stock === 0 
+                    ? "bg-red-600 text-white border-red-600 shadow-sm" 
+                    : "bg-white text-black/60 border-black/10 hover:border-black/20"
+                )}
+              >
+                <span>✕ Terjual / SOLD (Stok: 0)</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-black/50">
+              *Toko menggunakan sistem 1 pasang/barang unik. Pilih <strong>Stok: 1</strong> jika barang siap dijual, atau <strong>Stok: 0</strong> jika sudah terjual (SOLD).
+            </p>
           </div>
 
           {/* Pilihan Size / Ukuran Sepatu */}
@@ -1041,6 +1127,71 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
               value={formData.specifications}
               onChange={e => setFormData({ ...formData, specifications: e.target.value })}
             />
+          </div>
+
+          {/* Video Preview YouTube */}
+          <div className="space-y-3 p-4 bg-red-50/50 border border-red-200/80 rounded-2xl">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-widest text-red-700 flex items-center gap-1.5">
+                <Youtube size={16} className="text-red-600 fill-red-600/20" /> Link Video Preview YouTube (Opsional)
+              </label>
+              {formData.youtubeUrl && (
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, youtubeUrl: '' })}
+                  className="text-[11px] font-bold text-red-500 hover:text-red-700"
+                >
+                  Hapus Link
+                </button>
+              )}
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Contoh: https://www.youtube.com/watch?v=... atau https://youtu.be/..."
+                className="w-full bg-white border border-red-200 focus:border-red-500 rounded-xl pl-3.5 pr-9 py-2.5 text-xs font-medium text-black placeholder:text-black/30 focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all"
+                value={formData.youtubeUrl}
+                onChange={e => setFormData({ ...formData, youtubeUrl: e.target.value })}
+              />
+              <Youtube size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500/50 pointer-events-none" />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-black/50 font-medium">
+              <span className="font-bold text-black/70">Mendukung:</span>
+              <span className="bg-white px-2 py-0.5 rounded border border-black/10">watch?v=...</span>
+              <span className="bg-white px-2 py-0.5 rounded border border-black/10">youtu.be/...</span>
+              <span className="bg-white px-2 py-0.5 rounded border border-black/10">shorts/...</span>
+              <span className="bg-white px-2 py-0.5 rounded border border-black/10">ID Video (11 digit)</span>
+            </div>
+
+            {/* Live YouTube Player Preview */}
+            {formData.youtubeUrl.trim() && (
+              getYouTubeVideoId(formData.youtubeUrl) ? (
+                <div className="space-y-2 pt-2 border-t border-red-200/60">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-green-700 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                      Video YouTube Valid & Siap Diputar di Halaman Produk
+                    </span>
+                    <span className="text-[11px] font-mono text-black/50">ID: {getYouTubeVideoId(formData.youtubeUrl)}</span>
+                  </div>
+                  <div className="aspect-video w-full rounded-xl overflow-hidden border border-black/10 shadow-sm bg-black">
+                    <iframe
+                      src={getYouTubeEmbedUrl(formData.youtubeUrl) || ''}
+                      title="Preview Video Produk YouTube"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-[11px] font-medium flex items-center gap-2">
+                  <span>⚠️ Format URL belum cocok. Pastikan menyalin link lengkap dari YouTube atau YouTube Shorts.</span>
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>

@@ -1469,7 +1469,7 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                           <div className="flex items-center gap-2 text-[10px] text-black/50 flex-wrap">
                             <span>Merk: {p.brand || '-'}</span>
                             <span>•</span>
-                            <span>Stok: {p.stock}</span>
+                            <span>Stok: {p.stock === 0 ? 'SOLD' : '1'}</span>
                             <span>•</span>
                             <span>Sizes: {p.sizes?.join(', ') || 'Semua'}</span>
                           </div>

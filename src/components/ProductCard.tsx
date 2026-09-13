@@ -1,9 +1,9 @@
 import React from 'react';
-import { Heart, ShoppingCart, Eye, Star, MapPin, Share2, Crown, Sparkles } from 'lucide-react';
+import { Heart, ShoppingCart, Eye, Star, MapPin, Share2, Crown, Sparkles, Play, Youtube } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
-import { formatPrice, cn } from '../lib/utils';
+import { formatPrice, cn, getYouTubeVideoId } from '../lib/utils';
 import { STORE } from '../constants';
 import { isLuxuryProduct } from '../lib/luxury';
 import LuxuryCertificateModal from './LuxuryCertificateModal';
@@ -31,13 +31,12 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
   const location = store?.location || 'Majalengka';
   
   const stockInfo = React.useMemo(() => {
-    if (product.stock === undefined) return null;
-    if (product.stock === 0) return { label: 'SOLD', color: 'bg-red-600 text-white font-extrabold' };
-    if (product.stock <= 5) return { label: `Sisa ${product.stock}`, color: 'bg-orange-500 text-white font-bold' };
-    return { label: 'Tersedia', color: 'bg-green-500/10 text-green-600 font-bold' };
+    const currentStock = product.stock !== undefined ? product.stock : 1;
+    if (currentStock === 0) return { label: 'SOLD', color: 'bg-red-600 text-white font-extrabold' };
+    return { label: 'Sisa 1', color: 'bg-orange-500 text-white font-bold' };
   }, [product.stock]);
 
-  const isSoldOut = product.stock === 0;
+  const isSoldOut = (product.stock !== undefined ? product.stock : 1) === 0;
 
   return (
     <>
@@ -90,6 +89,14 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
               <span className="bg-red-700 text-white font-bold text-xs px-3 py-1 rounded-full uppercase tracking-widest shadow-md">
                 SOLD
               </span>
+            </div>
+          )}
+
+          {/* YouTube Video Badge */}
+          {Boolean(product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl)) && (
+            <div className="absolute bottom-2 left-2 z-10 bg-black/80 backdrop-blur-xs text-white text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-sm border border-white/10 pointer-events-none">
+              <Play size={10} className="fill-red-500 text-red-500" />
+              <span>Video</span>
             </div>
           )}
 

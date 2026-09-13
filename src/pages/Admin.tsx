@@ -1,16 +1,23 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, googleProvider, isFirebaseEnabled } from '../lib/firebase';
 import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getLocalOrders, getLocalNewsletters, OrderRecord, NewsletterRecord, clearLocalData, updateLocalOrderStatus } from '../lib/storage';
-import { formatPrice } from '../lib/utils';
+import { formatPrice, cn, getYouTubeVideoId, getYouTubeEmbedUrl } from '../lib/utils';
 import { 
   updateOrderStatus,
-  getMyProducts
+  getMyProducts,
+  updateProduct
 } from '../lib/sellerService';
 import { Product } from '../types';
 import { CONTACT_INFO, ADMIN_EMAIL, ADMIN_EMAILS, isAdminEmail, getAllAdminEmails, addAdminEmail, removeAdminEmail } from '../constants';
-import { Loader2, LogOut, ShoppingBag, Mail, CheckCircle, Clock, Trash2, Package, ShieldAlert, Globe, Users, Plus, ShieldCheck, UserCheck, FileText, Printer, Sparkles, ExternalLink } from 'lucide-react';
+import { 
+  Loader2, LogOut, ShoppingBag, Mail, CheckCircle, Clock, Trash2, 
+  Package, ShieldAlert, Globe, Users, Plus, ShieldCheck, UserCheck, 
+  FileText, Printer, Sparkles, ExternalLink, Youtube, Play, Video, 
+  Eye, Search, X, Check, Save
+} from 'lucide-react';
 import InvoiceMaker from '../components/InvoiceMaker';
 
 // Admin dashboard component
@@ -21,11 +28,15 @@ export default function Admin() {
   const [orders, setOrders] = React.useState<OrderRecord[]>([]);
   const [newsletters, setNewsletters] = React.useState<NewsletterRecord[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
-  const [activeTab, setActiveTab] = React.useState<'orders' | 'invoices' | 'newsletter' | 'admins'>('orders');
+  const [activeTab, setActiveTab] = React.useState<'orders' | 'products' | 'invoices' | 'newsletter' | 'admins'>('orders');
   const [adminEmailsList, setAdminEmailsList] = React.useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = React.useState('');
   const [loginEmailInput, setLoginEmailInput] = React.useState('');
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = React.useState<OrderRecord | null>(null);
+  const [editingVideoProduct, setEditingVideoProduct] = React.useState<Product | null>(null);
+  const [videoUrlInput, setVideoUrlInput] = React.useState('');
+  const [isSavingVideo, setIsSavingVideo] = React.useState(false);
+  const [productSearchQuery, setProductSearchQuery] = React.useState('');
 
   const refreshAdminList = () => {
     setAdminEmailsList(getAllAdminEmails());
@@ -223,6 +234,46 @@ export default function Admin() {
     }
   };
 
+  const handleOpenVideoModal = (prod: Product) => {
+    setEditingVideoProduct(prod);
+    setVideoUrlInput(prod.youtubeUrl || '');
+  };
+
+  const handleSaveProductVideo = async () => {
+    if (!editingVideoProduct) return;
+    setIsSavingVideo(true);
+    try {
+      const cleanUrl = videoUrlInput.trim();
+      await updateProduct(editingVideoProduct.id, { youtubeUrl: cleanUrl });
+      setProducts(prev => prev.map(p => p.id === editingVideoProduct.id ? { ...p, youtubeUrl: cleanUrl } : p));
+      alert('Link video YouTube produk berhasil disimpan!');
+      setEditingVideoProduct(null);
+    } catch (err: any) {
+      console.error('Error updating video URL:', err);
+      alert('Gagal menyimpan link video: ' + (err?.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsSavingVideo(false);
+    }
+  };
+
+  const handleRemoveProductVideo = async () => {
+    if (!editingVideoProduct) return;
+    if (!confirm('Hapus link video YouTube dari produk ini?')) return;
+    setIsSavingVideo(true);
+    try {
+      await updateProduct(editingVideoProduct.id, { youtubeUrl: '' });
+      setProducts(prev => prev.map(p => p.id === editingVideoProduct.id ? { ...p, youtubeUrl: '' } : p));
+      setVideoUrlInput('');
+      setEditingVideoProduct(null);
+      alert('Video YouTube berhasil dihapus dari produk.');
+    } catch (err: any) {
+      console.error('Error removing video URL:', err);
+      alert('Gagal menghapus link video: ' + (err?.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsSavingVideo(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-bg-light pt-32 pb-20 px-4">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -264,6 +315,12 @@ export default function Admin() {
             className={`px-5 sm:px-7 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'orders' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
           >
             <ShoppingBag size={18} /> Pesanan ({orders.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('products')}
+            className={`px-5 sm:px-7 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'products' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
+          >
+            <Youtube size={18} className="text-red-600" /> Video Produk ({products.filter(p => p.youtubeUrl && getYouTubeVideoId(p.youtubeUrl)).length}/{products.length})
           </button>
           <button 
             onClick={() => setActiveTab('invoices')}
@@ -419,7 +476,7 @@ export default function Admin() {
                 </tbody>
               </table>
             </div>
-          ) : (
+          ) : activeTab === 'admins' ? (
             <div className="space-y-6">
               {/* Form Tambah Admin */}
               <div className="bg-white p-6 md:p-8 rounded-3xl border border-black/5 shadow-sm space-y-4">
@@ -492,8 +549,355 @@ export default function Admin() {
                 </div>
               </div>
             </div>
-          )}
+          ) : activeTab === 'products' ? (
+            <div className="space-y-6">
+              {/* Header & Stats Banner */}
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-black/5 shadow-sm space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-red-50 text-red-600 rounded-xl">
+                        <Youtube size={24} />
+                      </div>
+                      <h3 className="text-xl font-display font-bold text-black">Kelola Video Preview Produk (YouTube)</h3>
+                    </div>
+                    <p className="text-black/60 text-sm max-w-2xl">
+                      Masukkan tautan video YouTube (review, unboxing, atau katalog) untuk setiap produk. Pelanggan dapat langsung memutar video ini di halaman detail produk.
+                    </p>
+                  </div>
+                  <Link
+                    to="/seller"
+                    className="inline-flex items-center gap-2 bg-black text-white px-5 py-3 rounded-2xl font-bold text-sm hover:scale-105 transition-all shadow-md shrink-0"
+                  >
+                    <Plus size={16} /> Buka Seller Center
+                  </Link>
+                </div>
+
+                {/* Metrics */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                  <div className="p-4 rounded-2xl bg-black/[0.02] border border-black/5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-black/40">Total Produk</p>
+                    <p className="text-2xl font-display font-black text-black mt-1">{products.length}</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-red-50/70 border border-red-200">
+                    <p className="text-xs font-bold uppercase tracking-wider text-red-600 flex items-center gap-1.5">
+                      <Youtube size={14} /> Sudah Ada Video
+                    </p>
+                    <p className="text-2xl font-display font-black text-red-600 mt-1">
+                      {products.filter(p => p.youtubeUrl && getYouTubeVideoId(p.youtubeUrl)).length}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-black/[0.02] border border-black/5">
+                    <p className="text-xs font-bold uppercase tracking-wider text-black/40">Belum Ada Video</p>
+                    <p className="text-2xl font-display font-black text-black/60 mt-1">
+                      {products.filter(p => !p.youtubeUrl || !getYouTubeVideoId(p.youtubeUrl)).length}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-black/30" />
+                  <input
+                    type="text"
+                    placeholder="Cari nama produk, kategori, atau brand..."
+                    value={productSearchQuery}
+                    onChange={(e) => setProductSearchQuery(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-2xl bg-black/[0.03] border border-black/5 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 transition-all text-black"
+                  />
+                  {productSearchQuery && (
+                    <button
+                      onClick={() => setProductSearchQuery('')}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-black/40 hover:text-black"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Product Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products
+                  .filter(p => {
+                    if (!productSearchQuery.trim()) return true;
+                    const q = productSearchQuery.toLowerCase();
+                    return (
+                      p.name.toLowerCase().includes(q) ||
+                      (p.brand && p.brand.toLowerCase().includes(q)) ||
+                      (p.category && p.category.toLowerCase().includes(q))
+                    );
+                  })
+                  .map((product) => {
+                    const hasValidVideo = Boolean(product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl));
+                    const videoId = getYouTubeVideoId(product.youtubeUrl);
+
+                    return (
+                      <div
+                        key={product.id}
+                        className="bg-white rounded-3xl border border-black/5 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                      >
+                        <div className="space-y-4">
+                          {/* Image & Video Badge */}
+                          <div className="aspect-video relative bg-black/5 overflow-hidden group">
+                            <img
+                              src={product.images[0] || 'https://picsum.photos/400/300'}
+                              alt={product.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            {hasValidVideo ? (
+                              <div className="absolute top-3 left-3 bg-red-600 text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5">
+                                <Youtube size={14} className="fill-white" /> Ada Video
+                              </div>
+                            ) : (
+                              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+                                Belum Ada Video
+                              </div>
+                            )}
+
+                            {hasValidVideo && (
+                              <button
+                                onClick={() => handleOpenVideoModal(product)}
+                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-sm"
+                              >
+                                <Play size={24} className="fill-white" /> Putar Preview Video
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="p-5 space-y-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-wider bg-black/5 px-2 py-0.5 rounded text-black/60">
+                                {product.category}
+                              </span>
+                              {product.brand && (
+                                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">
+                                  {product.brand}
+                                </span>
+                              )}
+                              <span className={cn(
+                                "text-[10px] font-black px-2 py-0.5 rounded ml-auto",
+                                product.stock === 0 ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              )}>
+                                Stok: {product.stock === 0 ? 'SOLD (0)' : '1'}
+                              </span>
+                            </div>
+
+                            <h4 className="font-bold text-black text-base line-clamp-1" title={product.name}>
+                              {product.name}
+                            </h4>
+
+                            <p className="text-lg font-black text-black">
+                              {formatPrice(product.price)}
+                            </p>
+
+                            {/* Current YouTube URL Display */}
+                            {hasValidVideo ? (
+                              <div className="p-3 bg-red-50/80 border border-red-200 rounded-2xl space-y-1 text-xs">
+                                <div className="flex items-center justify-between text-red-700 font-bold">
+                                  <span className="flex items-center gap-1">
+                                    <Youtube size={14} /> Link YouTube:
+                                  </span>
+                                  <span className="font-mono text-[10px] bg-white px-1.5 py-0.5 rounded border border-red-200">
+                                    ID: {videoId}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-black/60 truncate font-mono">
+                                  {product.youtubeUrl}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-black/[0.02] border border-black/5 rounded-2xl text-xs text-black/50 italic">
+                                Belum ada link video YouTube yang dipasang.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="p-5 pt-0 grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => handleOpenVideoModal(product)}
+                            className={cn(
+                              "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm",
+                              hasValidVideo 
+                                ? "bg-red-600 text-white hover:bg-red-700" 
+                                : "bg-black text-white hover:bg-black/80"
+                            )}
+                          >
+                            <Youtube size={14} />
+                            {hasValidVideo ? "Ubah / Test Video" : "+ Pasang Link"}
+                          </button>
+                          <Link
+                            to={`/product/${product.id}`}
+                            className="py-2.5 px-3 rounded-xl font-bold text-xs text-black bg-black/5 hover:bg-black/10 flex items-center justify-center gap-1.5 transition-all"
+                          >
+                            <ExternalLink size={14} /> Lihat di Web
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {products.length === 0 && (
+                <div className="bg-white p-12 rounded-3xl border border-black/5 text-center space-y-4">
+                  <Package size={48} className="mx-auto text-black/20" />
+                  <p className="text-black/40 font-bold">Belum ada produk yang terdaftar.</p>
+                  <Link
+                    to="/seller"
+                    className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-2xl font-bold text-sm"
+                  >
+                    Tambah Produk Pertama di Seller Center
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
+
+        {/* Modal: Input / Edit Link Video YouTube */}
+        {editingVideoProduct && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-black/10 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-black/5 flex items-center justify-between bg-black/[0.01]">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-red-600 text-white rounded-2xl shadow-md">
+                    <Youtube size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-black">
+                      Kelola Video YouTube Produk
+                    </h3>
+                    <p className="text-xs text-black/50 truncate max-w-md">
+                      {editingVideoProduct.name} &bull; {formatPrice(editingVideoProduct.price)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEditingVideoProduct(null)}
+                  className="p-2 text-black/40 hover:text-black hover:bg-black/5 rounded-xl transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5 overflow-y-auto">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-black/70 flex items-center justify-between">
+                    <span>Link Video YouTube</span>
+                    {videoUrlInput && (
+                      <button
+                        type="button"
+                        onClick={() => setVideoUrlInput('')}
+                        className="text-[11px] text-red-500 font-bold hover:underline"
+                      >
+                        Bersihkan
+                      </button>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={videoUrlInput}
+                      onChange={(e) => setVideoUrlInput(e.target.value)}
+                      placeholder="Contoh: https://www.youtube.com/watch?v=dQw4w9WgXcQ atau https://youtu.be/..."
+                      className="w-full bg-black/[0.03] border-2 border-black/10 focus:border-red-600 rounded-2xl pl-4 pr-10 py-3 text-sm text-black focus:outline-none transition-all placeholder:text-black/30"
+                    />
+                    <Youtube size={18} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-red-600 pointer-events-none" />
+                  </div>
+                  <p className="text-[11px] text-black/50">
+                    💡 <strong>Tips:</strong> Salin URL dari address bar browser atau tombol "Bagikan" di YouTube. Mendukung video reguler, YouTube Shorts, serta link singkat youtu.be.
+                  </p>
+                </div>
+
+                {/* Embedded Live Preview */}
+                {videoUrlInput.trim() ? (
+                  getYouTubeVideoId(videoUrlInput) ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-green-700 flex items-center gap-1.5">
+                          <Check size={14} className="text-green-600 stroke-[3]" />
+                          Video Terverifikasi & Siap Diputar
+                        </span>
+                        <span className="text-[11px] font-mono text-black/40">
+                          ID: {getYouTubeVideoId(videoUrlInput)}
+                        </span>
+                      </div>
+                      <div className="aspect-video w-full rounded-2xl overflow-hidden border border-black/10 bg-black shadow-md">
+                        <iframe
+                          src={getYouTubeEmbedUrl(videoUrlInput) || ''}
+                          title="Preview Video Produk"
+                          className="w-full h-full border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs space-y-1">
+                      <p className="font-bold">⚠️ Format Link Belum Dikenali</p>
+                      <p className="text-amber-800/80">
+                        Pastikan link berformat YouTube yang valid, misalnya:
+                        <br />
+                        <code className="bg-amber-100/70 px-1 py-0.5 rounded text-[11px]">https://www.youtube.com/watch?v=VIDEO_ID</code> atau <code className="bg-amber-100/70 px-1 py-0.5 rounded text-[11px]">https://youtu.be/VIDEO_ID</code>
+                      </p>
+                    </div>
+                  )
+                ) : (
+                  <div className="p-8 border-2 border-dashed border-black/10 rounded-2xl text-center space-y-2 bg-black/[0.01]">
+                    <Video size={36} className="mx-auto text-black/20" />
+                    <p className="text-xs text-black/50 font-medium">
+                      Tempel link YouTube di atas untuk melihat preview langsung di sini sebelum disimpan.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-black/5 bg-black/[0.01] flex items-center justify-between gap-3">
+                {editingVideoProduct.youtubeUrl ? (
+                  <button
+                    type="button"
+                    onClick={handleRemoveProductVideo}
+                    disabled={isSavingVideo}
+                    className="text-xs font-bold text-red-600 hover:text-red-700 px-3 py-2 rounded-xl hover:bg-red-50 transition-all flex items-center gap-1.5"
+                  >
+                    <Trash2 size={14} /> Hapus Video
+                  </button>
+                ) : <div />}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingVideoProduct(null)}
+                    disabled={isSavingVideo}
+                    className="px-5 py-2.5 rounded-xl text-xs font-bold text-black/60 hover:text-black hover:bg-black/5 transition-all"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveProductVideo}
+                    disabled={isSavingVideo || (Boolean(videoUrlInput.trim()) && !getYouTubeVideoId(videoUrlInput))}
+                    className="px-6 py-2.5 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-700 transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isSavingVideo ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Simpan Video
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </div>
   );
