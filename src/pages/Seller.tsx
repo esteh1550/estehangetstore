@@ -28,7 +28,11 @@ import {
   Youtube,
   Play,
   Video,
-  CheckCircle
+  CheckCircle,
+  Ruler,
+  Flame,
+  Stamp,
+  Check
 } from 'lucide-react';
 import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
@@ -42,10 +46,11 @@ import {
   getMyProducts,
   uploadImage,
   MAIN_STORE_ID,
-  syncAllProductsStockToOne
+  syncAllProductsStockToOne,
+  updateProductStatus
 } from '../lib/sellerService';
 import { Store, Product } from '../types';
-import { cn, formatPrice, getYouTubeVideoId, getYouTubeEmbedUrl } from '../lib/utils';
+import { cn, formatPrice, getYouTubeVideoId, getYouTubeEmbedUrl, isFreshDrop, applyWatermarkToImage } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
 import InvoiceMaker from '../components/InvoiceMaker';
@@ -341,6 +346,10 @@ export default function Seller() {
                           getMyProducts(setProducts);
                         }
                       }}
+                      onStatusChange={async (newStatus) => {
+                        await updateProductStatus(product.id, newStatus);
+                        getMyProducts(setProducts);
+                      }}
                     />
                   </div>
                 ))}
@@ -563,7 +572,21 @@ function StatCard({ title, value, icon }: { title: string, value: string | numbe
   );
 }
 
-function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: () => void, onDelete: () => void }) {
+function ProductItem({ 
+  product, 
+  onEdit, 
+  onDelete, 
+  onStatusChange 
+}: { 
+  product: Product, 
+  onEdit: () => void, 
+  onDelete: () => void,
+  onStatusChange?: (status: 'ready' | 'booked' | 'sold') => void
+}) {
+  const isSold = (product.stock !== undefined ? product.stock : 1) === 0;
+  const isBooked = Boolean(product.isBooked && !isSold);
+  const isFresh = isFreshDrop(product);
+
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     const url = `${window.location.origin}/product/${product.id}`;
@@ -580,50 +603,134 @@ function ProductItem({ product, onEdit, onDelete }: { product: Product, onEdit: 
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden group shadow-sm">
-      <div className="aspect-video relative overflow-hidden">
-        <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
-        <div className="absolute top-4 right-4 flex gap-2">
-          <button 
-            title="Bagikan Link Produk"
-            onClick={handleShare} 
-            className="p-2 bg-white/90 text-sky-blue rounded-xl shadow-lg hover:scale-110 transition-all"
-          >
-            <Share2 size={16} />
-          </button>
-          <button onClick={onEdit} className="p-2 bg-white/90 text-tea-main rounded-xl shadow-lg hover:scale-110 transition-all">
-            <Edit2 size={16} />
-          </button>
-          <button onClick={onDelete} className="p-2 bg-white/90 text-red-500 rounded-xl shadow-lg hover:scale-110 transition-all">
-            <Trash2 size={16} />
-          </button>
+    <div className="bg-white rounded-3xl border border-black/5 overflow-hidden group shadow-sm flex flex-col justify-between h-full">
+      <div>
+        <div className="aspect-video relative overflow-hidden bg-black/5">
+          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+          
+          {/* Fresh Drop and Booked Badges on Image */}
+          <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+            {isFresh && !isSold && (
+              <span className="bg-gradient-to-r from-orange-600 to-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-md uppercase tracking-wider">
+                <Flame size={11} className="fill-white" />
+                Fresh Drop
+              </span>
+            )}
+            {isBooked && (
+              <span className="bg-amber-500 text-black text-[9px] font-black px-2 py-0.5 rounded-lg shadow-md uppercase tracking-wider border border-white/50">
+                🟡 BOOKED / KEEP
+              </span>
+            )}
+          </div>
+
+          <div className="absolute top-3 right-3 flex gap-1.5 z-10">
+            <button 
+              title="Bagikan Link Produk"
+              onClick={handleShare} 
+              className="p-2 bg-white/90 text-sky-blue rounded-xl shadow-lg hover:scale-110 transition-all"
+            >
+              <Share2 size={15} />
+            </button>
+            <button onClick={onEdit} className="p-2 bg-white/90 text-tea-main rounded-xl shadow-lg hover:scale-110 transition-all">
+              <Edit2 size={15} />
+            </button>
+            <button onClick={onDelete} className="p-2 bg-white/90 text-red-500 rounded-xl shadow-lg hover:scale-110 transition-all">
+              <Trash2 size={15} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-2">
+          <Link to={`/product/${product.id}`}>
+            <h4 className="font-bold text-black truncate hover:text-tea-main transition-colors text-sm">{product.name}</h4>
+          </Link>
+          <p className="text-tea-main font-bold text-sm">{formatPrice(product.price)}</p>
+          
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 px-2 py-0.5 rounded-lg text-black/50">
+              {product.category}
+            </span>
+            <span className={cn(
+              "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border",
+              isSold 
+                ? "bg-red-50 text-red-600 border-red-200" 
+                : isBooked
+                  ? "bg-amber-50 text-amber-800 border-amber-300"
+                  : "bg-emerald-50 text-emerald-700 border-emerald-200"
+            )}>
+              {isSold ? "SOLD (0)" : isBooked ? "BOOKED" : "Stok: 1 (Ready)"}
+            </span>
+            {product.sizes && product.sizes.length > 0 && (
+              <span className="text-[10px] font-black text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-lg">
+                Size: {product.sizes.join(', ')}
+              </span>
+            )}
+            {product.insoleLength && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-lg">
+                <Ruler size={10} className="text-emerald-600" />
+                {product.insoleLength.toLowerCase().includes('cm') ? product.insoleLength : `${product.insoleLength} cm`}
+              </span>
+            )}
+            {product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg">
+                <Youtube size={11} className="text-red-600" />
+                <span>Video</span>
+              </span>
+            )}
+            <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 uppercase tracking-widest ml-auto">
+              <Eye size={10} />
+              <span>{product.views || 0}</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="p-4 space-y-2">
-        <Link to={`/product/${product.id}`}>
-          <h4 className="font-bold text-black truncate hover:text-tea-main transition-colors">{product.name}</h4>
-        </Link>
-        <p className="text-tea-main font-bold">{formatPrice(product.price)}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest bg-black/5 px-2 py-1 rounded-lg text-black/40">
-            {product.category}
-          </span>
-          <span className={cn(
-            "text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg border",
-            product.stock === 0 ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"
-          )}>
-            {product.stock === 0 ? "SOLD (0)" : "Stok: 1 (Ready)"}
-          </span>
-          {product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl) && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-lg">
-              <Youtube size={12} className="text-red-600" />
-              <span>Video YT</span>
-            </span>
-          )}
-          <div className="flex items-center gap-1 text-[10px] font-bold text-black/30 uppercase tracking-widest ml-auto">
-            <Eye size={10} />
-            <span>{product.views || 0} views</span>
-          </div>
+
+      {/* Quick Status Bar for Seller */}
+      <div className="p-3 bg-black/[0.02] border-t border-black/5 flex items-center justify-between gap-1.5">
+        <span className="text-[10px] font-bold text-black/50 uppercase tracking-wider">Status Cepat:</span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onStatusChange?.('ready')}
+            title="Setel ke Ready"
+            className={cn(
+              "px-2 py-1 rounded-lg text-[10px] font-black border transition-all flex items-center gap-0.5",
+              !isSold && !isBooked 
+                ? "bg-emerald-600 text-white border-emerald-700 shadow-xs" 
+                : "bg-white text-black/60 border-black/10 hover:bg-black/5"
+            )}
+          >
+            {!isSold && !isBooked && <Check size={10} />}
+            Ready
+          </button>
+          <button
+            type="button"
+            onClick={() => onStatusChange?.('booked')}
+            title="Setel ke Booked (Keep)"
+            className={cn(
+              "px-2 py-1 rounded-lg text-[10px] font-black border transition-all flex items-center gap-0.5",
+              isBooked 
+                ? "bg-amber-500 text-black border-amber-600 shadow-xs" 
+                : "bg-white text-black/60 border-black/10 hover:bg-black/5"
+            )}
+          >
+            {isBooked && <Check size={10} />}
+            Booked
+          </button>
+          <button
+            type="button"
+            onClick={() => onStatusChange?.('sold')}
+            title="Setel ke SOLD"
+            className={cn(
+              "px-2 py-1 rounded-lg text-[10px] font-black border transition-all flex items-center gap-0.5",
+              isSold 
+                ? "bg-red-600 text-white border-red-700 shadow-xs" 
+                : "bg-white text-black/60 border-black/10 hover:bg-black/5"
+            )}
+          >
+            {isSold && <Check size={10} />}
+            SOLD
+          </button>
         </div>
       </div>
     </div>
@@ -738,9 +845,11 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
   );
 }
 
-const DEFAULT_SHOE_SIZES = ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46'];
-
 function ProductForm({ storeId, initialData, onComplete }: { storeId: string, initialData?: Product, onComplete: (id?: string) => void }) {
+  const [sizeInput, setSizeInput] = React.useState<string>(
+    initialData?.sizes && initialData.sizes.length > 0 ? initialData.sizes.join(', ') : ''
+  );
+  const [autoWatermark, setAutoWatermark] = React.useState(true);
   const [formData, setFormData] = React.useState({
     name: initialData?.name || '',
     price: initialData?.price || 0,
@@ -749,7 +858,10 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
     brand: initialData?.brand || 'Nike',
     shoeModel: initialData?.shoeModel || 'Sepatu Kasual / Lifestyle',
     shoeType: initialData?.shoeType || 'Sneakers Low-top',
-    sizes: initialData?.sizes || ['38', '39', '40', '41', '42', '43', '44'],
+    sizes: initialData?.sizes || [],
+    insoleLength: initialData?.insoleLength || '',
+    isBooked: initialData?.isBooked || false,
+    bookedBy: initialData?.bookedBy || '',
     youtubeUrl: initialData?.youtubeUrl || '',
     description: initialData?.description || '',
     specifications: Array.isArray(initialData?.specifications) 
@@ -758,9 +870,15 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
     images: initialData?.images || []
   });
   const [loading, setLoading] = React.useState(false);
+  const [watermarkingStatus, setWatermarkingStatus] = React.useState<string | null>(null);
   const [imageFiles, setImageFiles] = React.useState<File[]>([]);
-  const [customSizeInput, setCustomSizeInput] = React.useState('');
   const [isAutoGenerated, setIsAutoGenerated] = React.useState(false);
+
+  const handleSizeInputChange = (val: string) => {
+    setSizeInput(val);
+    const parsed = val.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    setFormData(prev => ({ ...prev, sizes: parsed }));
+  };
 
   // Get current sub-types based on selected model
   const selectedModelData = React.useMemo(() => {
@@ -776,12 +894,20 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
       formData.shoeType
     );
 
+    const newSizes = (formData.sizes && formData.sizes.length > 0 && !forceOverride) 
+      ? formData.sizes 
+      : (generated.suggestedSizes ? [generated.suggestedSizes[0]] : []);
+
+    if (newSizes.length > 0 && (!sizeInput.trim() || forceOverride)) {
+      setSizeInput(newSizes.join(', '));
+    }
+
     setFormData(prev => ({
       ...prev,
       brand: generated.suggestedBrand || prev.brand,
       shoeModel: generated.suggestedModel || prev.shoeModel,
       shoeType: generated.suggestedType || prev.shoeType,
-      sizes: (prev.sizes && prev.sizes.length > 0 && !forceOverride) ? prev.sizes : generated.suggestedSizes,
+      sizes: newSizes,
       description: (prev.description && !forceOverride) ? prev.description : generated.description,
       specifications: (prev.specifications && !forceOverride) ? prev.specifications : generated.specifications.join('\n')
     }));
@@ -805,35 +931,29 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
     });
   };
 
-  const toggleSize = (sz: string) => {
-    setFormData(prev => {
-      const currentSizes = prev.sizes || [];
-      if (currentSizes.includes(sz)) {
-        return { ...prev, sizes: currentSizes.filter(s => s !== sz) };
-      } else {
-        return { ...prev, sizes: [...currentSizes, sz].sort() };
-      }
-    });
-  };
-
-  const handleAddCustomSize = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && customSizeInput.trim()) {
-      e.preventDefault();
-      const sz = customSizeInput.trim();
-      if (!formData.sizes.includes(sz)) {
-        setFormData(prev => ({ ...prev, sizes: [...prev.sizes, sz] }));
-      }
-      setCustomSizeInput('');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       let finalImages = [...formData.images];
       if (imageFiles.length > 0) {
-        const uploaded = await Promise.all(imageFiles.map(f => uploadImage(f, 'products')));
+        let filesToUpload = imageFiles;
+        if (autoWatermark) {
+          setWatermarkingStatus('Menerapkan watermark toko pada foto...');
+          filesToUpload = await Promise.all(
+            imageFiles.map(async (file) => {
+              try {
+                return await applyWatermarkToImage(file, 'E STORE THRIFT • MAJALENGKA');
+              } catch (err) {
+                console.warn('Gagal watermark gambar, gunakan file asli:', err);
+                return file;
+              }
+            })
+          );
+        }
+
+        setWatermarkingStatus('Mengunggah gambar produk...');
+        const uploaded = await Promise.all(filesToUpload.map(f => uploadImage(f, 'products')));
         finalImages = [...finalImages, ...uploaded];
       }
 
@@ -845,8 +965,15 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         ? formData.specifications.split('\n').filter(s => s.trim()) 
         : (Array.isArray(formData.specifications) ? formData.specifications : []);
 
+      const parsedSizes = sizeInput.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+      const finalSizes = parsedSizes.length > 0 ? parsedSizes : (formData.sizes.length > 0 ? formData.sizes : ['42']);
+
       const productData = {
         ...formData,
+        sizes: finalSizes,
+        insoleLength: formData.insoleLength.trim(),
+        isBooked: formData.isBooked,
+        bookedBy: formData.bookedBy.trim(),
         storeId,
         images: finalImages,
         specifications: specs,
@@ -865,6 +992,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
       alert('Gagal menyimpan produk: ' + (error?.message || 'Terjadi kesalahan'));
     } finally {
       setLoading(false);
+      setWatermarkingStatus(null);
     }
   };
 
@@ -901,6 +1029,20 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
             {imageFiles.length > 0 && (
               <p className="text-xs text-tea-main font-bold">{imageFiles.length} foto baru akan diupload</p>
             )}
+
+            {/* Auto Watermark Checkbox */}
+            <label className="flex items-center gap-2.5 p-2.5 bg-tea-light/10 border border-tea-main/20 rounded-xl cursor-pointer hover:bg-tea-light/20 transition-all">
+              <input
+                type="checkbox"
+                checked={autoWatermark}
+                onChange={e => setAutoWatermark(e.target.checked)}
+                className="w-4 h-4 text-tea-main rounded border-black/20 focus:ring-tea-main cursor-pointer"
+              />
+              <div className="flex items-center gap-1.5 text-xs font-bold text-black/80">
+                <Stamp size={14} className="text-tea-main" />
+                <span>Beri Watermark Otomatis ("E STORE THRIFT • MAJALENGKA")</span>
+              </div>
+            </label>
           </div>
 
           <div className="space-y-2">
@@ -994,52 +1136,153 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
             <p className="text-[11px] text-black/50">
               *Toko menggunakan sistem 1 pasang/barang unik. Pilih <strong>Stok: 1</strong> jika barang siap dijual, atau <strong>Stok: 0</strong> jika sudah terjual (SOLD).
             </p>
+
+            {/* Status Booking / Keep */}
+            <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-2.5">
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isBooked}
+                  onChange={e => setFormData({ ...formData, isBooked: e.target.checked })}
+                  className="w-4 h-4 text-amber-600 rounded border-black/20 focus:ring-amber-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-amber-950">
+                  Tandai Sedang di-Book / Keep oleh Pembeli (Tahan Barang)
+                </span>
+              </label>
+              {formData.isBooked && (
+                <div className="pt-1 space-y-1">
+                  <input
+                    type="text"
+                    placeholder="Nama / Nomor WA pembeli yang booking (opsional)..."
+                    className="w-full bg-white border border-amber-300 rounded-xl px-3 py-2 text-xs font-medium text-black placeholder:text-black/30"
+                    value={formData.bookedBy || ''}
+                    onChange={e => setFormData({ ...formData, bookedBy: e.target.value })}
+                  />
+                  <p className="text-[10px] text-amber-900/70">
+                    *Produk tetap terlihat di etalase dengan label "BOOKED", memberi kesempatan calon pembeli lain untuk mengantre jika booking batal.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Pilihan Size / Ukuran Sepatu */}
-          <div className="space-y-2 p-4 bg-black/5 rounded-2xl border border-black/5">
+          {/* Input Ukuran / Size Sepatu */}
+          <div className="space-y-2.5 p-4 bg-black/5 rounded-2xl border border-black/5">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-widest text-black/60">Pilihan Ukuran (Size Sepatu)</label>
-              <span className="text-[10px] font-bold text-black/40">Klik untuk memilih</span>
+              <label className="text-xs font-bold uppercase tracking-widest text-black/70 flex items-center gap-1.5">
+                <Ruler size={15} className="text-blue-600" />
+                Ukuran / Size Sepatu (Input Langsung)
+              </label>
+              <span className="text-[10px] font-bold text-black/50 bg-white px-2 py-0.5 rounded-md border border-black/10">
+                Wajib Diisi
+              </span>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {DEFAULT_SHOE_SIZES.map(sz => {
-                const isSelected = formData.sizes.includes(sz);
-                return (
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Ketik ukuran sepatu (Contoh: 42,5 atau 41,5 atau 42)..."
+                className="w-full bg-white border-2 border-black/10 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-3 text-sm font-bold text-black placeholder:text-black/30 transition-all"
+                value={sizeInput}
+                onChange={e => handleSizeInputChange(e.target.value)}
+              />
+            </div>
+
+            {/* Quick Suggestion Chips */}
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[11px] font-medium text-black/50">
+                Pilih cepat atau ketik langsung di atas (mendukung ukuran pecahan seperti 41,5 / 42,5):
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {['38', '38,5', '39', '39,5', '40', '40,5', '41', '41,5', '42', '42,5', '43', '43,5', '44', '44,5', '45'].map(sz => (
                   <button
                     key={sz}
                     type="button"
-                    onClick={() => toggleSize(sz)}
+                    onClick={() => handleSizeInputChange(sz)}
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-black transition-all border",
-                      isSelected
-                        ? "bg-black text-white border-black shadow-sm scale-105"
-                        : "bg-white text-black/60 border-black/10 hover:border-black/30"
+                      "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border",
+                      sizeInput.trim() === sz
+                        ? "bg-black text-white border-black shadow-xs scale-105"
+                        : "bg-white text-black/70 border-black/10 hover:border-black/30 hover:bg-black/5"
                     )}
                   >
                     {sz}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
 
-            <div className="pt-2">
+            {formData.sizes.length > 0 ? (
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-[11px] font-bold text-black/60">Size Terdaftar:</span>
+                <div className="flex flex-wrap gap-1">
+                  {formData.sizes.map((s, idx) => (
+                    <span key={idx} className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-xs font-black">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-[10px] text-orange-600 font-medium">
+                *Belum ada size yang diinput (silakan ketik ukuran sepatu, misal: 42,5)
+              </p>
+            )}
+
+            <p className="text-[11px] text-black/50 pt-1 border-t border-black/5">
+              *Catatan Sistem: Produk dengan size <strong>42,5</strong> akan otomatis muncul saat pembeli memfilter size <strong>42</strong>. Begitu juga size <strong>41,5</strong> akan otomatis muncul di filter size <strong>41</strong>, dan seterusnya.
+            </p>
+          </div>
+
+          {/* Input Panjang Insole (cm) */}
+          <div className="space-y-2.5 p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200/80">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold uppercase tracking-widest text-emerald-900 flex items-center gap-1.5">
+                <Ruler size={15} className="text-emerald-700" />
+                Panjang Insole (cm)
+              </label>
+              <span className="text-[10px] font-bold text-emerald-800 bg-white px-2 py-0.5 rounded-md border border-emerald-200">
+                Penting untuk Thrift
+              </span>
+            </div>
+
+            <div className="relative">
               <input
                 type="text"
-                placeholder="Tambah size kustom (Contoh: 37.5, XXL, 47) lalu Enter..."
-                className="w-full bg-white border border-black/10 rounded-xl px-3 py-2 text-xs font-medium text-black"
-                value={customSizeInput}
-                onChange={e => setCustomSizeInput(e.target.value)}
-                onKeyDown={handleAddCustomSize}
+                placeholder="Contoh: 26.5 cm atau 27 cm..."
+                className="w-full bg-white border-2 border-emerald-200 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 rounded-xl px-4 py-3 text-sm font-bold text-black placeholder:text-black/30 transition-all"
+                value={formData.insoleLength || ''}
+                onChange={e => setFormData({ ...formData, insoleLength: e.target.value })}
               />
             </div>
 
-            {formData.sizes.length > 0 && (
-              <p className="text-[10px] font-extrabold text-blue-600">
-                Size Aktif: {formData.sizes.join(', ')}
+            {/* Quick Insole Suggestion Chips */}
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[11px] font-medium text-emerald-900/70">
+                Pilih cepat panjang insole:
               </p>
-            )}
+              <div className="flex flex-wrap gap-1.5">
+                {['24 cm', '24.5 cm', '25 cm', '25.5 cm', '26 cm', '26.5 cm', '27 cm', '27.5 cm', '28 cm', '28.5 cm', '29 cm'].map(ins => (
+                  <button
+                    key={ins}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, insoleLength: ins })}
+                    className={cn(
+                      "px-2.5 py-1 rounded-lg text-xs font-bold transition-all border",
+                      formData.insoleLength === ins
+                        ? "bg-emerald-700 text-white border-emerald-700 shadow-xs"
+                        : "bg-white text-emerald-900 border-emerald-200 hover:bg-emerald-100/50"
+                    )}
+                  >
+                    {ins}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="text-[11px] text-emerald-800/80 pt-1 border-t border-emerald-200/50">
+              *Panjang insole membantu pembeli sepatu thrift memastikan ukuran pas di kaki tanpa khawatir standar ukuran antar brand berbeda.
+            </p>
           </div>
         </div>
 
@@ -1202,7 +1445,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         className="w-full bg-tea-main text-white py-4 rounded-2xl font-bold hover:scale-[1.02] transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
       >
         {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-        Simpan Produk
+        {loading ? (watermarkingStatus || 'Menyimpan Produk...') : 'Simpan Produk'}
       </button>
     </form>
   );

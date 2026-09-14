@@ -22,6 +22,10 @@ export interface Product {
   shoeModel?: 'Sepatu Kasual / Lifestyle' | 'Sepatu Olahraga' | 'Sepatu Formal & Semi-Formal' | 'Sepatu Wanita' | string;
   shoeType?: string;
   sizes?: string[];
+  insoleLength?: string;
+  isBooked?: boolean;
+  bookedBy?: string;
+  isFreshDrop?: boolean;
   stock: number;
   images: string[];
   description: string;

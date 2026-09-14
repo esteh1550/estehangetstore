@@ -215,6 +215,18 @@ export const updateProduct = async (productId: string, productData: Partial<Prod
   setLocalData('products', updated);
 };
 
+export const updateProductStatus = async (productId: string, status: 'ready' | 'booked' | 'sold') => {
+  let patch: Partial<Product> = {};
+  if (status === 'ready') {
+    patch = { stock: 1, isBooked: false };
+  } else if (status === 'booked') {
+    patch = { stock: 1, isBooked: true };
+  } else if (status === 'sold') {
+    patch = { stock: 0, isBooked: false };
+  }
+  return await updateProduct(productId, patch);
+};
+
 export const deleteProduct = async (productId: string) => {
   if (isFirebaseEnabled && db) {
     try {

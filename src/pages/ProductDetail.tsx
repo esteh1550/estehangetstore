@@ -4,14 +4,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, 
   Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, 
-  Eye, X, Store, Truck, Building2, Banknote, MapPin, Youtube, Play, Video, Film
+  Eye, X, Store, Truck, Building2, Banknote, MapPin, Youtube, Play, Video, Film,
+  Ruler, Flame, HelpCircle, Check, Info, ShieldCheck
 } from 'lucide-react';
+import ShippingCalculator from '../components/ShippingCalculator';
 import { saveOrder } from '../lib/storage';
 import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
-import { formatPrice, cn, getYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeThumbnailUrl } from '../lib/utils';
+import { formatPrice, cn, getYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, isFreshDrop } from '../lib/utils';
 import { Product, Review } from '../types';
 import Modal from '../components/Modal';
-import { getProduct, addReview, getReviewsByProduct, incrementProductView, uploadImage } from '../lib/sellerService';
+import { getProduct, addReview, getReviewsByProduct, incrementProductView, uploadImage, updateProductStatus } from '../lib/sellerService';
 import { useProductHistory } from '../lib/useProductHistory';
 import ProductCard from '../components/ProductCard';
 import { useToast } from '../components/Toast';
@@ -45,8 +47,33 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
     courier: 'JNE Regular'
   });
 
+  const [selectedSize, setSelectedSize] = React.useState('');
   const [reviews, setReviews] = React.useState<Review[]>([]);
-  const [selectedSize, setSelectedSize] = React.useState<string>('');
+  const [showInsoleModal, setShowInsoleModal] = React.useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = React.useState(false);
+
+  const isSold = (product?.stock !== undefined ? product.stock : 1) === 0;
+  const isBooked = Boolean(product?.isBooked && !isSold);
+  const isFresh = product ? isFreshDrop(product) : false;
+
+  const handleQuickStatusChange = async (newStatus: 'ready' | 'booked' | 'sold') => {
+    if (!product) return;
+    setIsUpdatingStatus(true);
+    try {
+      await updateProductStatus(product.id, newStatus);
+      setProduct(prev => {
+        if (!prev) return null;
+        if (newStatus === 'ready') return { ...prev, stock: 1, isBooked: false };
+        if (newStatus === 'booked') return { ...prev, stock: 1, isBooked: true };
+        return { ...prev, stock: 0, isBooked: false };
+      });
+      showToast(`Status berhasil diubah menjadi: ${newStatus.toUpperCase()}`, 'success');
+    } catch (e: any) {
+      showToast(`Gagal update status: ${e.message || 'Terjadi kesalahan'}`, 'error');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   const availableSizes = React.useMemo(() => {
     if (product?.sizes && product.sizes.length > 0) {
@@ -410,6 +437,12 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                       {product.brand}
                     </span>
                   )}
+                  {isFresh && !isSold && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-orange-600 to-amber-500 text-white rounded-full text-xs font-black uppercase tracking-widest shadow-sm">
+                      <Flame size={12} className="fill-white" />
+                      Fresh Drop
+                    </span>
+                  )}
                   {product.shoeModel && (
                     <span className="inline-block px-3 py-1 bg-black/5 text-black rounded-full text-xs font-bold uppercase tracking-widest">
                       {product.shoeModel}
@@ -422,29 +455,88 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                   )}
                   <span className={cn(
                     "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                    (product.stock !== undefined ? product.stock : 1) === 0 
+                    isSold 
                       ? "bg-red-600 text-white shadow-sm animate-pulse" 
-                      : "bg-orange-500 text-white"
+                      : isBooked
+                        ? "bg-amber-500 text-black shadow-sm font-black"
+                        : "bg-orange-500 text-white"
                   )}>
-                    {(product.stock !== undefined ? product.stock : 1) === 0 
+                    {isSold 
                       ? "SOLD OUT" 
-                      : "Stok: 1 Pasang (Eksklusif)"}
+                      : isBooked
+                        ? "🟡 BOOKED (KEEP)"
+                        : "Stok: 1 Pasang (Eksklusif)"}
                   </span>
                 </div>
                 <h1 className={cn(
                   "text-4xl md:text-5xl font-display font-bold tracking-tighter text-outline",
-                  product.stock === 0 ? "line-through text-black/40" : "text-black"
+                  isSold ? "line-through text-black/40" : "text-black"
                 )}>
                   {product.name}
                 </h1>
                 <div className="flex items-center gap-6">
-                  <p className={cn("text-3xl font-bold text-outline", product.stock === 0 ? "text-black/40 line-through" : "text-black")}>
+                  <p className={cn("text-3xl font-bold text-outline", isSold ? "text-black/40 line-through" : "text-black")}>
                     {formatPrice(product.price)}
                   </p>
                   <div className="flex items-center gap-1 text-black/40 text-xs font-bold uppercase tracking-widest">
                     <Eye size={14} />
                     <span>{product.views || 0} Dilihat</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Quick Status Switcher (Mudahkan Penjual / Admin) */}
+              <div className="p-3 bg-black/5 border border-black/10 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-black/60 flex items-center gap-1.5">
+                    <Info size={13} className="text-blue-600" />
+                    Status Ketersediaan Produk:
+                  </span>
+                  {isUpdatingStatus && <span className="text-[10px] text-blue-600 animate-pulse font-bold">Menyimpan...</span>}
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isUpdatingStatus}
+                    onClick={() => handleQuickStatusChange('ready')}
+                    className={cn(
+                      "py-1.5 px-2 rounded-xl text-xs font-black transition-all border text-center flex items-center justify-center gap-1",
+                      !isSold && !isBooked 
+                        ? "bg-emerald-600 text-white border-emerald-700 shadow-xs" 
+                        : "bg-white text-black/70 border-black/10 hover:bg-black/5"
+                    )}
+                  >
+                    {!isSold && !isBooked && <Check size={12} />}
+                    Ready (Stok 1)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpdatingStatus}
+                    onClick={() => handleQuickStatusChange('booked')}
+                    className={cn(
+                      "py-1.5 px-2 rounded-xl text-xs font-black transition-all border text-center flex items-center justify-center gap-1",
+                      isBooked 
+                        ? "bg-amber-500 text-black border-amber-600 shadow-xs" 
+                        : "bg-white text-black/70 border-black/10 hover:bg-black/5"
+                    )}
+                  >
+                    {isBooked && <Check size={12} />}
+                    Booked (Keep)
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpdatingStatus}
+                    onClick={() => handleQuickStatusChange('sold')}
+                    className={cn(
+                      "py-1.5 px-2 rounded-xl text-xs font-black transition-all border text-center flex items-center justify-center gap-1",
+                      isSold 
+                        ? "bg-red-600 text-white border-red-700 shadow-xs" 
+                        : "bg-white text-black/70 border-black/10 hover:bg-black/5"
+                    )}
+                  >
+                    {isSold && <Check size={12} />}
+                    SOLD (Terjual)
+                  </button>
                 </div>
               </div>
 
@@ -494,16 +586,29 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 </ul>
               </div>
 
-              {/* Pilihan Ukuran (Size) */}
+              {/* Pilihan Ukuran & Info Insole */}
               <div className="space-y-3 pt-4 border-t border-black/10">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm uppercase tracking-widest text-black/40 text-outline">Pilih Ukuran (Size)</h4>
-                  {selectedSize && (
-                    <span className="text-xs font-black text-black bg-black/5 px-2.5 py-1 rounded-lg">
-                      Size Dipilih: <span className="text-blue-600 font-extrabold">{selectedSize}</span>
-                    </span>
-                  )}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm uppercase tracking-widest text-black/40 text-outline">Pilihan Ukuran</h4>
+                    {product.insoleLength && (
+                      <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
+                        <Ruler size={13} className="text-emerald-600" />
+                        Insole: {product.insoleLength.toLowerCase().includes('cm') ? product.insoleLength : `${product.insoleLength} cm`}
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowInsoleModal(true)}
+                    className="text-xs font-bold text-tea-main hover:underline flex items-center gap-1"
+                  >
+                    <HelpCircle size={14} />
+                    Panduan Ukur Kaki (Insole)
+                  </button>
                 </div>
+
                 <div className="flex flex-wrap gap-2">
                   {availableSizes.map(sz => (
                     <button
@@ -511,7 +616,7 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                       type="button"
                       onClick={() => setSelectedSize(sz)}
                       className={cn(
-                        "w-12 h-12 rounded-2xl text-sm font-black transition-all border flex items-center justify-center shadow-sm",
+                        "min-w-[48px] px-3 h-12 rounded-2xl text-sm font-black transition-all border flex items-center justify-center shadow-sm",
                         selectedSize === sz
                           ? "bg-black text-white border-black scale-105 shadow-md"
                           : "bg-white text-black/70 border-black/10 hover:border-black/40 hover:bg-black/5"
@@ -523,14 +628,27 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 </div>
               </div>
 
+              {/* Tombol Aksi Pembelian */}
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                {product.stock === 0 ? (
+                {isSold ? (
                   <button
                     disabled
                     className="w-full bg-red-600 text-white py-5 rounded-2xl font-black text-lg uppercase tracking-wider flex items-center justify-center gap-3 cursor-not-allowed shadow-lg opacity-90"
                   >
                     SOLD OUT (STOK HABIS)
                   </button>
+                ) : isBooked ? (
+                  <div className="w-full space-y-2">
+                    <button
+                      disabled
+                      className="w-full bg-amber-500 text-black py-5 rounded-2xl font-black text-base sm:text-lg uppercase tracking-wider flex items-center justify-center gap-3 cursor-not-allowed shadow-md"
+                    >
+                      🟡 STATUS: BOOKED / DI-KEEP
+                    </button>
+                    <p className="text-center text-xs text-black/60">
+                      Sepatu ini sedang di-booking sementara oleh pembeli lain. Hubungi admin untuk masuk daftar tunggu jika booking batal.
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <button
@@ -559,6 +677,11 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                     </button>
                   </>
                 )}
+              </div>
+
+              {/* Kalkulator Estimasi Ongkir Dari Majalengka */}
+              <div className="pt-2">
+                <ShippingCalculator productName={product.name} />
               </div>
             </>
           ) : (
@@ -1004,6 +1127,82 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
               className="max-w-full max-h-[90vh] object-contain rounded-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+          </motion.div>
+        )}
+
+        {/* Modal Panduan Ukur Insole */}
+        {showInsoleModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+            onClick={() => setShowInsoleModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-black/10 space-y-5"
+            >
+              <div className="flex items-start justify-between border-b border-black/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-tea-main/15 text-tea-main flex items-center justify-center font-bold">
+                    <Ruler size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-black">Panduan Ukuran Insole</h3>
+                    <p className="text-xs text-black/60">Cara akurat mengukur panjang kaki untuk sepatu thrift</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInsoleModal(false)}
+                  className="p-2 text-black/40 hover:text-black rounded-xl hover:bg-black/5"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {product.insoleLength && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-900">Panjang Insole Sepatu Ini:</span>
+                  <span className="text-sm font-black text-emerald-800 bg-emerald-100 px-3 py-1 rounded-xl">
+                    {product.insoleLength.toLowerCase().includes('cm') ? product.insoleLength : `${product.insoleLength} cm`}
+                  </span>
+                </div>
+              )}
+
+              <div className="space-y-3 text-xs text-black/80 leading-relaxed">
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-black text-white font-bold flex items-center justify-center shrink-0">1</span>
+                  <p>Letakkan selembar kertas putih di atas lantai yang rata dan tempelkan tumit Anda ke dinding.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-black text-white font-bold flex items-center justify-center shrink-0">2</span>
+                  <p>Tandai ujung jari kaki terpanjang Anda di atas kertas menggunakan pensil/pulpen tegak lurus.</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-black text-white font-bold flex items-center justify-center shrink-0">3</span>
+                  <p>Ukur jarak dari tepi tumit ke titik ujung jari menggunakan penggaris (dalam sentimeter / cm).</p>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded-full bg-tea-main text-white font-bold flex items-center justify-center shrink-0">★</span>
+                  <p className="font-semibold text-tea-main">Tips Thrift: Tambahkan toleransi 0.5 cm - 1 cm dari panjang telapak kaki asli agar pas & nyaman saat memakai kaos kaki.</p>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInsoleModal(false)}
+                  className="w-full bg-black text-white py-3 rounded-xl font-bold text-sm hover:bg-black/90 transition-colors"
+                >
+                  Saya Mengerti
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

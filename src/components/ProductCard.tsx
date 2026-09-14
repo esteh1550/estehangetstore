@@ -1,9 +1,9 @@
 import React from 'react';
-import { Heart, ShoppingCart, Eye, Star, MapPin, Share2, Crown, Sparkles, Play, Youtube } from 'lucide-react';
+import { Heart, ShoppingCart, Eye, Star, MapPin, Share2, Crown, Sparkles, Play, Youtube, Flame, Clock, Ruler } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
-import { formatPrice, cn, getYouTubeVideoId } from '../lib/utils';
+import { formatPrice, cn, getYouTubeVideoId, isFreshDrop } from '../lib/utils';
 import { STORE } from '../constants';
 import { isLuxuryProduct } from '../lib/luxury';
 import LuxuryCertificateModal from './LuxuryCertificateModal';
@@ -37,6 +37,8 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
   }, [product.stock]);
 
   const isSoldOut = (product.stock !== undefined ? product.stock : 1) === 0;
+  const isBooked = Boolean(product.isBooked && !isSoldOut);
+  const isFresh = isFreshDrop(product);
 
   return (
     <>
@@ -66,31 +68,48 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
             loading="lazy"
             decoding="async"
           />
-          
-          {/* Luxury Badge for price > 500k */}
-          {isLuxury && (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowLuxuryModal(true);
-              }}
-              title="Klik untuk melihat Perlakuan Khusus Produk Mewah"
-              className="absolute top-2 left-2 z-10 bg-gradient-to-r from-[#141210] to-[#2B2620] text-[#D4AF37] border border-[#D4AF37]/60 text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-md hover:scale-105 transition-transform tracking-wider uppercase"
-            >
-              <Crown size={11} className="text-[#D4AF37]" />
-              <span>MEWAH • VIP</span>
-            </button>
-          )}
 
-          {/* SOLD Overlay Badge */}
-          {isSoldOut && (
-            <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-10 pointer-events-none">
-              <span className="bg-red-700 text-white font-bold text-xs px-3 py-1 rounded-full uppercase tracking-widest shadow-md">
-                SOLD
+          {/* Badges on Top Left */}
+          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+            {/* Luxury Badge for price > 500k */}
+            {isLuxury && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowLuxuryModal(true);
+                }}
+                title="Klik untuk melihat Perlakuan Khusus Produk Mewah"
+                className="bg-gradient-to-r from-[#141210] to-[#2B2620] text-[#D4AF37] border border-[#D4AF37]/60 text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-md hover:scale-105 transition-transform tracking-wider uppercase"
+              >
+                <Crown size={11} className="text-[#D4AF37]" />
+                <span>MEWAH • VIP</span>
+              </button>
+            )}
+
+            {/* Fresh Drop Badge */}
+            {isFresh && !isSoldOut && (
+              <span className="bg-gradient-to-r from-orange-600 to-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm border border-white/20 uppercase tracking-wider">
+                <Flame size={11} className="fill-white" />
+                <span>FRESH DROP</span>
+              </span>
+            )}
+          </div>
+
+          {/* SOLD or BOOKED Overlay Badge */}
+          {isSoldOut ? (
+            <div className="absolute inset-0 bg-black/35 flex items-center justify-center z-10 pointer-events-none">
+              <span className="bg-red-700 text-white font-bold text-xs px-3.5 py-1.5 rounded-full uppercase tracking-widest shadow-md">
+                SOLD OUT
               </span>
             </div>
-          )}
+          ) : isBooked ? (
+            <div className="absolute inset-0 bg-amber-950/25 flex items-center justify-center z-10 pointer-events-none">
+              <span className="bg-amber-500 text-black font-black text-xs px-3 py-1 rounded-full uppercase tracking-widest shadow-md border border-white/40">
+                🟡 BOOKED / KEEP
+              </span>
+            </div>
+          ) : null}
 
           {/* YouTube Video Badge */}
           {Boolean(product.youtubeUrl && getYouTubeVideoId(product.youtubeUrl)) && (
@@ -136,6 +155,17 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
                   {product.brand}
                 </p>
               )}
+              {product.sizes && product.sizes.length > 0 && (
+                <span className="text-[10px] font-bold text-black/70 bg-black/5 px-1.5 py-0.2 rounded border border-black/5">
+                  Size {product.sizes.join(', ')}
+                </span>
+              )}
+              {product.insoleLength && (
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded flex items-center gap-0.5">
+                  <Ruler size={10} className="text-emerald-600" />
+                  {product.insoleLength.toLowerCase().includes('cm') ? product.insoleLength : `${product.insoleLength} cm`}
+                </span>
+              )}
               {isLuxury && (
                 <span className="text-[9px] font-black text-[#A37E1C] bg-[#D4AF37]/15 px-1.5 py-0.2 rounded">
                   VIP Box
@@ -161,19 +191,21 @@ const ProductCard = React.memo(({ product, isWishlisted, onAddToCart, onToggleWi
           </div>
 
           <button
-            onClick={() => !isSoldOut && onAddToCart(product)}
-            disabled={isSoldOut}
+            onClick={() => !isSoldOut && !isBooked && onAddToCart(product)}
+            disabled={isSoldOut || isBooked}
             className={cn(
               "w-full py-2.5 rounded-lg font-bold text-[10px] sm:text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 mt-2 shadow-sm",
               isSoldOut
                 ? "bg-red-700 text-white shadow-sm cursor-not-allowed"
-                : isLuxury
-                  ? "bg-gradient-to-r from-[#181512] to-[#362E25] text-[#E5C158] border border-[#D4AF37]/40 hover:to-[#181512] active:scale-[0.98]"
-                  : "bg-[#B83A0E] text-white hover:bg-[#992F0B] active:scale-[0.98]"
+                : isBooked
+                  ? "bg-amber-500 text-black font-black cursor-not-allowed"
+                  : isLuxury
+                    ? "bg-gradient-to-r from-[#181512] to-[#362E25] text-[#E5C158] border border-[#D4AF37]/40 hover:to-[#181512] active:scale-[0.98]"
+                    : "bg-[#B83A0E] text-white hover:bg-[#992F0B] active:scale-[0.98]"
             )}
           >
             <ShoppingCart size={13} className={isLuxury ? "text-[#D4AF37]" : "text-white"} /> 
-            {isSoldOut ? 'SOLD OUT' : (isLuxury ? 'ADD VIP CART' : 'ADD TO CART')}
+            {isSoldOut ? 'SOLD OUT' : isBooked ? 'BOOKED (KEEP)' : (isLuxury ? 'ADD VIP CART' : 'ADD TO CART')}
           </button>
         </div>
       </motion.div>

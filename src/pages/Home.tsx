@@ -5,7 +5,7 @@ import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
 import { Product } from '../types';
-import { cn, formatPrice } from '../lib/utils';
+import { cn, formatPrice, doesProductMatchSizeFilter } from '../lib/utils';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getAllProducts } from '../lib/sellerService';
 import { useProductHistory } from '../lib/useProductHistory';
@@ -147,7 +147,8 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                          p.description.toLowerCase().includes(searchLower) ||
                          (p.brand && p.brand.toLowerCase().includes(searchLower)) ||
                          (p.shoeModel && p.shoeModel.toLowerCase().includes(searchLower)) ||
-                         (p.shoeType && p.shoeType.toLowerCase().includes(searchLower));
+                         (p.shoeType && p.shoeType.toLowerCase().includes(searchLower)) ||
+                         (p.sizes && p.sizes.some(s => s.toLowerCase().includes(searchLower)));
 
     const matchesCategory = category === 'all' || p.category === category;
     
@@ -160,9 +161,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     const matchesShoeType = selectedShoeType === 'all' || 
                             (p.shoeType && p.shoeType === selectedShoeType);
 
-    const matchesSize = selectedSize === 'all' ||
-                        (p.sizes && p.sizes.includes(selectedSize)) ||
-                        (!p.sizes && ['38', '39', '40', '41', '42', '43', '44'].includes(selectedSize));
+    const matchesSize = doesProductMatchSizeFilter(p.sizes, selectedSize);
 
     const pMin = minPrice ? parseInt(minPrice) : 0;
     const pMax = maxPrice ? parseInt(maxPrice) : Infinity;
@@ -277,6 +276,13 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                 </button>
               ))}
             </div>
+
+            {selectedSize !== 'all' && (
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-black/60 bg-blue-50/60 border border-blue-100 rounded-lg px-2.5 py-1.5 w-fit">
+                <span className="font-bold text-blue-700">Filter Aktif: Size {selectedSize}</span>
+                <span>— menampilkan sepatu size {selectedSize} dan size {selectedSize},5 (pecahan/setengah)</span>
+              </div>
+            )}
           </div>
 
           {/* Filter Brand Sepatu */}
