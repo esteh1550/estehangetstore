@@ -32,7 +32,10 @@ import {
   Ruler,
   Flame,
   Stamp,
-  Check
+  Check,
+  BarChart3,
+  FileSpreadsheet,
+  Download
 } from 'lucide-react';
 import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
@@ -50,7 +53,7 @@ import {
   updateProductStatus
 } from '../lib/sellerService';
 import { Store, Product } from '../types';
-import { cn, formatPrice, getYouTubeVideoId, getYouTubeEmbedUrl, isFreshDrop, applyWatermarkToImage } from '../lib/utils';
+import { cn, formatPrice, getYouTubeVideoId, getYouTubeEmbedUrl, isFreshDrop, isHeicFile, convertHeicToJpeg, downloadImageToDevice } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
 import InvoiceMaker from '../components/InvoiceMaker';
@@ -65,13 +68,50 @@ export default function Seller() {
   const [authLoading, setAuthLoading] = React.useState(isFirebaseEnabled);
   const [isFirebaseAuthed, setIsFirebaseAuthed] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'products' | 'invoices' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'products' | 'invoices' | 'reports' | 'settings'>('dashboard');
   const [isEditingStore, setIsEditingStore] = React.useState(false);
   const [isAddingProduct, setIsAddingProduct] = React.useState(false);
   const [isImportingLink, setIsImportingLink] = React.useState(false);
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
   const [successProductId, setSuccessProductId] = React.useState<string | null>(null);
   const [isSyncingStock, setIsSyncingStock] = React.useState(false);
+
+  const handleExportCSV = () => {
+    if (products.length === 0) {
+      alert('Tidak ada produk untuk diekspor.');
+      return;
+    }
+    const headers = ['ID', 'Nama Produk', 'Brand', 'Model', 'Kategori', 'Size', 'Insole', 'Kondisi', 'Harga (Rp)', 'Status', 'Views', 'Tanggal Export'];
+    const rows = products.map(p => {
+      const isSold = (p.stock !== undefined ? p.stock : 1) <= 0;
+      const isBooked = Boolean(p.isBooked && !isSold);
+      const status = isSold ? 'SOLD' : isBooked ? 'BOOKED' : 'READY';
+      return [
+        `"${p.id}"`,
+        `"${(p.name || '').replace(/"/g, '""')}"`,
+        `"${p.brand || '-'}"`,
+        `"${p.shoeModel || '-'}"`,
+        `"${p.category || '-'}"`,
+        `"${(p.sizes || []).join('/')}"`,
+        `"${p.insoleLength || '-'}"`,
+        `"${p.condition || '-'}"`,
+        p.price || 0,
+        `"${status}"`,
+        p.views || 0,
+        `"${new Date().toLocaleDateString('id-ID')}"`
+      ].join(',');
+    });
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `laporan-penjualan-estore-majalengka-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleSyncStock = async () => {
     if (!confirm('Pastikan dan setel semua produk agar pasti memiliki stok 1?')) return;
@@ -223,6 +263,7 @@ export default function Seller() {
               <TabButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={16} />} label="Dashboard" />
               <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<Package size={16} />} label="Produk" />
               <TabButton active={activeTab === 'invoices'} onClick={() => setActiveTab('invoices')} icon={<FileText size={16} />} label="Invoice & Nota" />
+              <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<BarChart3 size={16} />} label="Laporan" />
               <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={16} />} label="Toko" />
             </div>
           )}
@@ -372,6 +413,132 @@ export default function Seller() {
               className="space-y-6"
             >
               <InvoiceMaker allProducts={products} />
+            </motion.div>
+          )}
+
+          {activeTab === 'reports' && (
+            <motion.div
+              key="reports"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-black/5 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-black/5 pb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-black flex items-center gap-2">
+                      <BarChart3 className="text-tea-main" size={24} /> Laporan Penjualan & Inventaris
+                    </h2>
+                    <p className="text-xs text-black/50">Rekap status produk, total nilai omset sepatu thrift, dan ekspor data ke Excel/CSV</p>
+                  </div>
+                  <button
+                    onClick={handleExportCSV}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all hover:scale-105 cursor-pointer"
+                  >
+                    <FileSpreadsheet size={16} />
+                    <span>Download Rekap (.CSV / Excel)</span>
+                  </button>
+                </div>
+
+                {/* Summary Metrics */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-black/5 p-4 rounded-2xl border border-black/5 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-black/50">Total Koleksi</p>
+                    <p className="text-2xl font-black text-black">{products.length} <span className="text-xs font-normal text-black/60">Pasang</span></p>
+                  </div>
+
+                  <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-200 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">Ready Stock</p>
+                    <p className="text-2xl font-black text-emerald-700">
+                      {products.filter(p => (p.stock !== undefined ? p.stock : 1) > 0 && !p.isBooked).length}
+                      <span className="text-xs font-normal text-emerald-800/80"> Pasang</span>
+                    </p>
+                  </div>
+
+                  <div className="bg-red-50 p-4 rounded-2xl border border-red-200 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-red-800">Terjual (Sold Out)</p>
+                    <p className="text-2xl font-black text-red-700">
+                      {products.filter(p => (p.stock !== undefined ? p.stock : 1) <= 0).length}
+                      <span className="text-xs font-normal text-red-800/80"> Pasang</span>
+                    </p>
+                  </div>
+
+                  <div className="bg-tea-main/10 p-4 rounded-2xl border border-tea-main/20 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-tea-main">Estimasi Nilai Stok</p>
+                    <p className="text-lg sm:text-xl font-black text-tea-main">
+                      {formatPrice(products.filter(p => (p.stock !== undefined ? p.stock : 1) > 0).reduce((sum, p) => sum + (p.price || 0), 0))}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Table of products */}
+                <div className="border border-black/10 rounded-2xl overflow-hidden">
+                  <div className="bg-black/5 px-4 py-3 font-bold text-xs text-black border-b border-black/10 flex items-center justify-between">
+                    <span>Daftar Rinci Produk ({products.length})</span>
+                    <span className="text-[11px] text-black/50 font-normal">Siap diekspor ke format Excel / Spreadsheet</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-black/[0.02] text-[10px] uppercase tracking-wider text-black/60 border-b border-black/5">
+                        <tr>
+                          <th className="py-2.5 px-4">Produk</th>
+                          <th className="py-2.5 px-3">Brand</th>
+                          <th className="py-2.5 px-3">Size / Insole</th>
+                          <th className="py-2.5 px-3">Harga</th>
+                          <th className="py-2.5 px-3">Status</th>
+                          <th className="py-2.5 px-3">Views</th>
+                          <th className="py-2.5 px-3 text-right">Foto</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-black/5">
+                        {products.map((p) => {
+                          const isSold = (p.stock !== undefined ? p.stock : 1) <= 0;
+                          const isBooked = Boolean(p.isBooked && !isSold);
+                          return (
+                            <tr key={p.id} className="hover:bg-black/[0.02]">
+                              <td className="py-2.5 px-4 font-bold text-black flex items-center gap-2">
+                                <img src={p.images[0]} alt="" className="w-8 h-8 rounded-lg object-cover border border-black/10 shrink-0" />
+                                <span className="truncate max-w-[180px] sm:max-w-xs">{p.name}</span>
+                              </td>
+                              <td className="py-2.5 px-3 font-semibold text-black/70">{p.brand || '-'}</td>
+                              <td className="py-2.5 px-3 text-black/80 font-mono">
+                                {(p.sizes || []).join('/')} {p.insoleLength ? `(${p.insoleLength})` : ''}
+                              </td>
+                              <td className="py-2.5 px-3 font-bold text-tea-main">{formatPrice(p.price)}</td>
+                              <td className="py-2.5 px-3">
+                                <span className={cn(
+                                  "px-2 py-0.5 rounded-md text-[10px] font-bold uppercase",
+                                  isSold 
+                                    ? "bg-red-100 text-red-800" 
+                                    : isBooked 
+                                      ? "bg-amber-100 text-amber-900" 
+                                      : "bg-emerald-100 text-emerald-800"
+                                )}>
+                                  {isSold ? 'SOLD' : isBooked ? 'BOOKED' : 'READY'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-black/50 font-mono">{p.views || 0}</td>
+                              <td className="py-2.5 px-3 text-right">
+                                <button
+                                  onClick={() => {
+                                    const filename = `estore-${p.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.jpg`;
+                                    downloadImageToDevice(p.images[0], filename);
+                                  }}
+                                  title="Download Foto"
+                                  className="p-1.5 hover:bg-black/10 rounded-lg text-black/60 hover:text-black inline-flex items-center"
+                                >
+                                  <Download size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           )}
 
@@ -602,6 +769,13 @@ function ProductItem({
     }
   };
 
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!product.images || product.images.length === 0) return;
+    const filename = `estore-${product.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.jpg`;
+    await downloadImageToDevice(product.images[0], filename);
+  };
+
   return (
     <div className="bg-white rounded-3xl border border-black/5 overflow-hidden group shadow-sm flex flex-col justify-between h-full">
       <div>
@@ -625,16 +799,23 @@ function ProductItem({
 
           <div className="absolute top-3 right-3 flex gap-1.5 z-10">
             <button 
+              title="Download Foto Produk"
+              onClick={handleDownload} 
+              className="p-2 bg-white/90 text-emerald-600 rounded-xl shadow-lg hover:scale-110 transition-all cursor-pointer"
+            >
+              <Download size={15} />
+            </button>
+            <button 
               title="Bagikan Link Produk"
               onClick={handleShare} 
-              className="p-2 bg-white/90 text-sky-blue rounded-xl shadow-lg hover:scale-110 transition-all"
+              className="p-2 bg-white/90 text-sky-blue rounded-xl shadow-lg hover:scale-110 transition-all cursor-pointer"
             >
               <Share2 size={15} />
             </button>
-            <button onClick={onEdit} className="p-2 bg-white/90 text-tea-main rounded-xl shadow-lg hover:scale-110 transition-all">
+            <button onClick={onEdit} title="Edit Produk" className="p-2 bg-white/90 text-tea-main rounded-xl shadow-lg hover:scale-110 transition-all cursor-pointer">
               <Edit2 size={15} />
             </button>
-            <button onClick={onDelete} className="p-2 bg-white/90 text-red-500 rounded-xl shadow-lg hover:scale-110 transition-all">
+            <button onClick={onDelete} title="Hapus Produk" className="p-2 bg-white/90 text-red-500 rounded-xl shadow-lg hover:scale-110 transition-all cursor-pointer">
               <Trash2 size={15} />
             </button>
           </div>
@@ -783,9 +964,21 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
             </div>
             <input 
               type="file" 
-              accept="image/*" 
+              accept="image/*,.heic,.heif,.HEIC,.HEIF" 
               className="absolute inset-0 opacity-0 cursor-pointer" 
-              onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+              onChange={async (e) => {
+                const file = e.target.files?.[0] || null;
+                if (file && isHeicFile(file)) {
+                  try {
+                    const converted = await convertHeicToJpeg(file);
+                    setLogoFile(converted);
+                  } catch (err) {
+                    setLogoFile(file);
+                  }
+                } else {
+                  setLogoFile(file);
+                }
+              }}
             />
             <div className="absolute -bottom-2 -right-2 bg-tea-main text-white p-2 rounded-xl shadow-lg">
               <Plus size={16} />
@@ -873,6 +1066,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
   const [watermarkingStatus, setWatermarkingStatus] = React.useState<string | null>(null);
   const [imageFiles, setImageFiles] = React.useState<File[]>([]);
   const [isAutoGenerated, setIsAutoGenerated] = React.useState(false);
+  const [isConvertingHeic, setIsConvertingHeic] = React.useState(false);
 
   const handleSizeInputChange = (val: string) => {
     setSizeInput(val);
@@ -937,24 +1131,25 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
     try {
       let finalImages = [...formData.images];
       if (imageFiles.length > 0) {
-        let filesToUpload = imageFiles;
-        if (autoWatermark) {
-          setWatermarkingStatus('Menerapkan watermark toko pada foto...');
-          filesToUpload = await Promise.all(
-            imageFiles.map(async (file) => {
-              try {
-                return await applyWatermarkToImage(file, 'E STORE THRIFT • MAJALENGKA');
-              } catch (err) {
-                console.warn('Gagal watermark gambar, gunakan file asli:', err);
-                return file;
-              }
-            })
-          );
-        }
-
-        setWatermarkingStatus('Mengunggah gambar produk...');
-        const uploaded = await Promise.all(filesToUpload.map(f => uploadImage(f, 'products')));
-        finalImages = [...finalImages, ...uploaded];
+        setWatermarkingStatus(
+          autoWatermark
+            ? 'Memberi watermark & mengompres foto produk...'
+            : 'Mengunggah & mengompres foto produk...'
+        );
+        const watermarkText = autoWatermark ? 'E STORE THRIFT • MAJALENGKA' : undefined;
+        const uploaded = await Promise.all(
+          imageFiles.map(async (f) => {
+            try {
+              return await uploadImage(f, 'products', { watermarkText });
+            } catch (err) {
+              console.warn('Gagal upload gambar tertentu, gunakan fallback aman:', err);
+              return 'https://picsum.photos/seed/estehanget/800/600';
+            }
+          })
+        );
+        finalImages = [...finalImages, ...uploaded].slice(0, 6);
+      } else {
+        finalImages = finalImages.slice(0, 6);
       }
 
       if (finalImages.length === 0) {
@@ -980,6 +1175,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         youtubeUrl: formData.youtubeUrl.trim()
       };
 
+      setWatermarkingStatus('Mengompres foto & menyimpan ke database...');
       let newId = '';
       if (initialData?.id) {
         await updateProduct(initialData.id, productData);
@@ -1020,14 +1216,79 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
                 <input 
                   type="file" 
                   multiple 
-                  accept="image/*" 
+                  accept="image/*,.heic,.heif,.HEIC,.HEIF" 
                   className="absolute inset-0 opacity-0 cursor-pointer"
-                  onChange={(e) => setImageFiles([...imageFiles, ...Array.from(e.target.files || [])])}
+                  onChange={async (e) => {
+                    const rawFiles: File[] = Array.from(e.target.files || []);
+                    if (rawFiles.length === 0) return;
+
+                    const maxAllowed = Math.max(0, 6 - formData.images.length);
+                    if (imageFiles.length + rawFiles.length > maxAllowed) {
+                      alert(`Maksimal 6 foto produk agar performa toko tetap cepat. Maksimal ${maxAllowed} foto baru dapat ditambahkan.`);
+                    }
+                    const selected = rawFiles.slice(0, maxAllowed);
+                    const hasHeic = selected.some(f => isHeicFile(f));
+                    if (hasHeic) {
+                      setIsConvertingHeic(true);
+                    }
+                    try {
+                      const processed = await Promise.all(
+                        selected.map(f => isHeicFile(f) ? convertHeicToJpeg(f) : f)
+                      );
+                      setImageFiles(prev => [...prev, ...processed].slice(0, maxAllowed));
+                    } catch (err) {
+                      console.warn('Gagal memproses file gambar:', err);
+                      setImageFiles(prev => [...prev, ...selected].slice(0, maxAllowed));
+                    } finally {
+                      setIsConvertingHeic(false);
+                      e.target.value = '';
+                    }
+                  }}
                 />
               </div>
             </div>
+
+            {isConvertingHeic && (
+              <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 text-xs font-semibold animate-pulse">
+                <Loader2 size={16} className="animate-spin text-blue-600" />
+                <span>Mengonversi foto iPhone (HEIC) ke format web (JPEG)...</span>
+              </div>
+            )}
             {imageFiles.length > 0 && (
-              <p className="text-xs text-tea-main font-bold">{imageFiles.length} foto baru akan diupload</p>
+              <div className="space-y-1.5 pt-1">
+                <p className="text-xs text-tea-main font-bold">
+                  {imageFiles.length} foto baru dipilih (siap diupload):
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {imageFiles.map((f, idx) => (
+                    <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-emerald-500 bg-black/5 shadow-xs">
+                      <img 
+                        src={URL.createObjectURL(f)} 
+                        alt="Preview baru" 
+                        className="w-full h-full object-cover"
+                        onLoad={(e) => {
+                          try {
+                            URL.revokeObjectURL((e.target as HTMLImageElement).src);
+                          } catch (err) {
+                            // ignore
+                          }
+                        }}
+                      />
+                      <span className="absolute bottom-0 inset-x-0 bg-emerald-600/90 text-[8px] font-black text-white text-center py-0.5 uppercase">
+                        Baru
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setImageFiles(imageFiles.filter((_, i) => i !== idx))}
+                        className="absolute top-0.5 right-0.5 bg-red-600 text-white rounded-md p-0.5 shadow-sm hover:scale-110 transition-all"
+                        title="Batal upload foto ini"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Auto Watermark Checkbox */}

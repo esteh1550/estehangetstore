@@ -5,12 +5,12 @@ import {
   ShoppingCart, MessageCircle, CheckCircle2, ArrowLeft, Loader2, 
   Star, Send, Share2, Facebook, Twitter, Link as LinkIcon, Camera, 
   Eye, X, Store, Truck, Building2, Banknote, MapPin, Youtube, Play, Video, Film,
-  Ruler, Flame, HelpCircle, Check, Info, ShieldCheck
+  Ruler, Flame, HelpCircle, Check, Info, ShieldCheck, Download, Copy
 } from 'lucide-react';
 import ShippingCalculator from '../components/ShippingCalculator';
 import { saveOrder } from '../lib/storage';
 import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
-import { formatPrice, cn, getYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, isFreshDrop } from '../lib/utils';
+import { formatPrice, cn, getYouTubeVideoId, getYouTubeEmbedUrl, getYouTubeThumbnailUrl, isFreshDrop, downloadImageToDevice, generateSocialShareText } from '../lib/utils';
 import { Product, Review } from '../types';
 import Modal from '../components/Modal';
 import { getProduct, addReview, getReviewsByProduct, incrementProductView, uploadImage, updateProductStatus } from '../lib/sellerService';
@@ -285,6 +285,24 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
     }
   };
 
+  const handleDownloadPhoto = async () => {
+    if (!product || !product.images || product.images.length === 0) return;
+    const currentImg = product.images[activeImage] || product.images[0];
+    const filename = `estore-thrift-${product.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-foto-${activeImage + 1}.jpg`;
+    showToast('Sedang menyiapkan unduhan foto...', 'info');
+    const ok = await downloadImageToDevice(currentImg, filename);
+    if (ok) {
+      showToast('Foto produk berhasil diunduh ke perangkat!', 'success');
+    }
+  };
+
+  const handleCopyStoryFormat = () => {
+    if (!product) return;
+    const storyText = generateSocialShareText(product, selectedSize);
+    navigator.clipboard.writeText(storyText);
+    showToast('Format caption WhatsApp / IG Story berhasil disalin!', 'success');
+  };
+
   return (
     <div className="pt-32 pb-20 px-4 max-w-7xl mx-auto">
       <Modal 
@@ -420,6 +438,26 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 </div>
               </button>
             )}
+          </div>
+
+          {/* Social Media & Promotion Toolkit for Seller / Buyer */}
+          <div className="bg-white p-3 rounded-2xl border border-black/10 shadow-sm flex flex-wrap items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadPhoto}
+              className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 bg-black/5 hover:bg-black/10 text-black border border-black/10 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs"
+            >
+              <Download size={14} className="text-black/70" />
+              <span>Unduh Foto (Watermark)</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyStoryFormat}
+              className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 bg-tea-main text-white hover:bg-tea-main/90 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs"
+            >
+              <Copy size={14} />
+              <span>Salin Format Story / WA</span>
+            </button>
           </div>
         </div>
 
@@ -1190,6 +1228,47 @@ export default function ProductDetail({ onAddToCart }: ProductDetailProps) {
                 <div className="flex items-start gap-3">
                   <span className="w-6 h-6 rounded-full bg-tea-main text-white font-bold flex items-center justify-center shrink-0">★</span>
                   <p className="font-semibold text-tea-main">Tips Thrift: Tambahkan toleransi 0.5 cm - 1 cm dari panjang telapak kaki asli agar pas & nyaman saat memakai kaos kaki.</p>
+                </div>
+              </div>
+
+              {/* Tabel Konversi Ukuran Standar */}
+              <div className="border border-black/10 rounded-2xl overflow-hidden text-[11px]">
+                <div className="bg-black/5 px-3 py-2 font-bold text-black border-b border-black/10 flex items-center justify-between">
+                  <span>Tabel Acuan Size & Panjang Insole (CM)</span>
+                  <span className="text-[10px] text-black/50 font-normal">Sneakers Standar</span>
+                </div>
+                <div className="grid grid-cols-4 bg-black/5 text-center font-bold text-[10px] text-black/70 py-1.5 border-b border-black/5">
+                  <div>EUR</div>
+                  <div>INSOLE (CM)</div>
+                  <div>US MEN</div>
+                  <div>US WOMEN</div>
+                </div>
+                <div className="max-h-36 overflow-y-auto divide-y divide-black/5 text-center font-mono">
+                  {[
+                    { eu: '36', cm: '22.5 cm', usM: '4.5', usW: '6.0' },
+                    { eu: '37', cm: '23.0 cm', usM: '5.0', usW: '6.5' },
+                    { eu: '38', cm: '24.0 cm', usM: '5.5', usW: '7.0' },
+                    { eu: '39', cm: '24.5 cm', usM: '6.5', usW: '8.0' },
+                    { eu: '40', cm: '25.0 cm', usM: '7.0', usW: '8.5' },
+                    { eu: '41', cm: '26.0 cm', usM: '8.0', usW: '9.5' },
+                    { eu: '42', cm: '26.5 cm', usM: '8.5', usW: '10.0' },
+                    { eu: '43', cm: '27.5 cm', usM: '9.5', usW: '11.0' },
+                    { eu: '44', cm: '28.0 cm', usM: '10.0', usW: '11.5' },
+                    { eu: '45', cm: '29.0 cm', usM: '11.0', usW: '12.5' },
+                  ].map((row) => (
+                    <div 
+                      key={row.eu} 
+                      className={cn(
+                        "grid grid-cols-4 py-1.5 transition-colors",
+                        product.sizes?.includes(row.eu) ? "bg-emerald-50 font-bold text-emerald-900" : "hover:bg-black/5"
+                      )}
+                    >
+                      <div className="font-sans font-bold">{row.eu}</div>
+                      <div>{row.cm}</div>
+                      <div>{row.usM}</div>
+                      <div>{row.usW}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

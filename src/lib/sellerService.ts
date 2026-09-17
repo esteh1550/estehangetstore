@@ -18,6 +18,7 @@ import {
 import { db, isFirebaseEnabled, handleFirestoreError, OperationType, auth } from './firebase';
 import { Store, Product, Review, Order } from '../types';
 import { PRODUCTS } from '../constants';
+import { isHeicFile, convertHeicToJpeg } from './utils';
 
 // Helper to ensure auth is ready or fail fast
 const ensureAuth = () => {
@@ -62,46 +63,498 @@ const setLocalData = <T>(key: string, data: T[]) => localStorage.setItem(STORAGE
 
 // --- Firestore Services ---
 
-export const uploadImage = async (file: File, _path: string): Promise<string> => {
-  // Client-side compression to keep Base64 strings small enough for Firestore's 1MB limit
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1000; // Limit dimensions
-        const MAX_HEIGHT = 1000;
-        let width = img.width;
-        let height = img.height;
+/**
+ * Utility to convert base64 data URL to binary Blob synchronously in memory.
+ */
+export function dataURLtoBlob(dataUrl: string): Blob | null {
+  try {
+    const parts = dataUrl.split(',');
+    if (parts.length < 2) return null;
+    const mimeMatch = parts[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const binaryStr = atob(parts[1]);
+    const len = binaryStr.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: mime });
+  } catch (e) {
+    return null;
+  }
+}
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
+/**
+ * Compresses a base64 image (or leaves external URLs untouched) to fit within strict Firestore field limits.
+ * Uses fast off-thread createImageBitmap with Blob or ObjectURL to prevent browser lockups.
+ */
+export const compressBase64Image = async (
+  dataUrl: string, 
+  maxDim = 540, 
+  quality = 0.55
+): Promise<string> => {
+  if (!dataUrl || typeof dataUrl !== 'string') return '';
+  if (!dataUrl.startsWith('data:image/')) return dataUrl;
+  
+  // If already under 35KB in base64 (~26KB binary), it is already very lightweight
+  if (dataUrl.length < 35 * 1024) return dataUrl;
+
+  // Method 1: Fast native off-thread decode with createImageBitmap & Blob
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const blob = dataURLtoBlob(dataUrl);
+      if (blob) {
+        const bitmap = await createImageBitmap(blob);
+        const canvas = document.createElement('canvas');
+        let w = bitmap.width;
+        let h = bitmap.height;
+        if (w > h) {
+          if (w > maxDim) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
           }
         } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
+          if (h > maxDim) {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
           }
         }
-
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.max(1, w);
+        canvas.height = Math.max(1, h);
         const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        // Convert to JPEG with medium compression
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-        resolve(dataUrl);
+        if (ctx) {
+          ctx.drawImage(bitmap, 0, 0, w, h);
+          bitmap.close();
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          if (compressed && compressed.length < dataUrl.length) {
+            return compressed;
+          }
+        } else {
+          bitmap.close();
+        }
+      }
+    } catch (e) {
+      // Fallback to HTMLImageElement
+    }
+  }
+
+  // Method 2: HTMLImageElement with Blob ObjectURL (instant load compared to raw dataURL)
+  try {
+    const blob = dataURLtoBlob(dataUrl);
+    const objectUrl = blob ? URL.createObjectURL(blob) : dataUrl;
+    const result = await new Promise<string>((resolve) => {
+      const timer = setTimeout(() => {
+        if (blob) {
+          try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+        }
+        resolve('');
+      }, 3000);
+
+      const img = new Image();
+      img.onload = () => {
+        clearTimeout(timer);
+        if (blob) {
+          try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+        }
+        try {
+          const canvas = document.createElement('canvas');
+          let w = img.naturalWidth || img.width;
+          let h = img.naturalHeight || img.height;
+          if (w > h) {
+            if (w > maxDim) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            }
+          } else {
+            if (h > maxDim) {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          canvas.width = Math.max(1, w);
+          canvas.height = Math.max(1, h);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve('');
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', quality);
+          resolve(compressed.length < dataUrl.length ? compressed : dataUrl);
+        } catch (err) {
+          resolve('');
+        }
       };
-      img.onerror = () => reject(new Error("Failed to load image for compression"));
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-  });
+
+      img.onerror = () => {
+        clearTimeout(timer);
+        if (blob) {
+          try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+        }
+        resolve('');
+      };
+
+      img.src = objectUrl;
+    });
+
+    if (result) return result;
+  } catch (e) {
+    // Fall through
+  }
+
+  // If compression completely failed and dataUrl is still oversized (>80KB),
+  // NEVER send a multi-megabyte uncompressed string into Firestore!
+  if (dataUrl.length > 80 * 1024) {
+    console.warn(`Image base64 too large (${dataUrl.length} bytes) and cannot be decompressed. Replacing with safe placeholder.`);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 500;
+      canvas.height = 375;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, 500, 375);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('ESTEHANGET THRIFT', 250, 180);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '14px sans-serif';
+        ctx.fillText('MAJALENGKA • 1-OF-1 THRIFT', 250, 215);
+        return canvas.toDataURL('image/jpeg', 0.65);
+      }
+    } catch (e) {}
+    return 'https://picsum.photos/seed/estehanget/600/450';
+  }
+
+  return dataUrl;
+};
+
+/**
+ * Sanitizes and compresses all product image URLs/base64 strings so that
+ * the total Firestore document array property stays strictly below 450,000 bytes
+ * (Firestore maximum document limit is 1,048,487 bytes).
+ */
+export const sanitizeProductImages = async (images: string[]): Promise<string[]> => {
+  if (!images || !Array.isArray(images) || images.length === 0) {
+    return [];
+  }
+
+  // Cap at 6 photos maximum per product for thrift/shoe showcase
+  const candidateImages = images.filter(Boolean).slice(0, 6);
+
+  // Pass 1: Standard compression (520px, quality 0.55 -> ~20-35KB per photo)
+  let processed = await Promise.all(
+    candidateImages.map(img => compressBase64Image(img, 520, 0.55))
+  );
+
+  let totalBytes = processed.reduce((sum, str) => sum + (str ? str.length : 0), 0);
+
+  // Pass 2: If total size exceeds 280KB, apply tighter compression (420px, quality 0.45)
+  if (totalBytes > 280 * 1024) {
+    console.warn(`Total images size ${totalBytes} exceeds 280KB. Applying tighter compression...`);
+    processed = await Promise.all(
+      processed.map(img => compressBase64Image(img, 420, 0.45))
+    );
+    totalBytes = processed.reduce((sum, str) => sum + (str ? str.length : 0), 0);
+  }
+
+  // Pass 3: If STILL > 380KB, drop down to top 4 photos at 360px, quality 0.40
+  if (totalBytes > 380 * 1024) {
+    console.warn(`Total images size ${totalBytes} still over 380KB. Downsampling top 4 photos...`);
+    processed = await Promise.all(
+      processed.slice(0, 4).map(img => compressBase64Image(img, 360, 0.40))
+    );
+  }
+
+  // FINAL HARD SAFETY GUARANTEE FOR FIRESTORE:
+  // Firestore hard limit for any property is 1,048,487 bytes.
+  // We strictly cap total images array at 450,000 bytes (~440 KB).
+  const MAX_ALLOWED_TOTAL_BYTES = 450 * 1024;
+  const safeList: string[] = [];
+  let currentBytes = 0;
+
+  for (const img of processed) {
+    if (!img) continue;
+    // Reject any single image that is still abnormally large (>95KB)
+    if (img.length > 95 * 1024) {
+      continue;
+    }
+    if (currentBytes + img.length <= MAX_ALLOWED_TOTAL_BYTES) {
+      safeList.push(img);
+      currentBytes += img.length;
+    } else {
+      break;
+    }
+  }
+
+  if (safeList.length === 0) {
+    safeList.push('https://picsum.photos/seed/estehanget/600/450');
+  }
+
+  return safeList;
+};
+
+function drawWatermarkOverlay(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  watermarkText: string
+) {
+  try {
+    const fontSize = Math.max(13, Math.round(width * 0.033));
+    ctx.font = `bold ${fontSize}px sans-serif`;
+
+    const text = watermarkText.toUpperCase();
+    const subText = 'MAJALENGKA • 1-OF-1 THRIFT';
+    const textWidth = Math.max(ctx.measureText(text).width, ctx.measureText(subText).width);
+
+    const paddingX = fontSize * 0.85;
+    const paddingY = fontSize * 0.55;
+    const boxWidth = textWidth + paddingX * 2;
+    const boxHeight = fontSize * 2.4 + paddingY * 1.4;
+
+    const posX = width - boxWidth - (fontSize * 0.7);
+    const posY = height - boxHeight - (fontSize * 0.7);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 15, 15, 0.78)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1.2;
+
+    const radius = 8;
+    ctx.beginPath();
+    ctx.moveTo(posX + radius, posY);
+    ctx.lineTo(posX + boxWidth - radius, posY);
+    ctx.quadraticCurveTo(posX + boxWidth, posY, posX + boxWidth, posY + radius);
+    ctx.lineTo(posX + boxWidth, posY + boxHeight - radius);
+    ctx.quadraticCurveTo(posX + boxWidth, posY + boxHeight, posX + boxWidth - radius, posY + boxHeight);
+    ctx.lineTo(posX + radius, posY + boxHeight);
+    ctx.quadraticCurveTo(posX, posY + boxHeight, posX, posY + boxHeight - radius);
+    ctx.lineTo(posX, posY + radius);
+    ctx.quadraticCurveTo(posX, posY, posX + radius, posY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Text 1: Brand
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(text, posX + paddingX, posY + paddingY + fontSize * 0.85);
+
+    // Text 2: Subtitle
+    ctx.font = `600 ${Math.round(fontSize * 0.65)}px sans-serif`;
+    ctx.fillStyle = '#E5C158';
+    ctx.fillText(subText, posX + paddingX, posY + paddingY + fontSize * 1.8);
+
+    ctx.restore();
+  } catch (err) {
+    // Non-fatal if watermark styling fails
+  }
+}
+
+export const uploadImage = async (
+  file: File, 
+  _path: string, 
+  options?: { watermarkText?: string }
+): Promise<string> => {
+  // Auto-convert HEIC/HEIF (e.g. from iPhone) to standard JPEG
+  if (isHeicFile(file)) {
+    try {
+      file = await convertHeicToJpeg(file);
+    } catch (e) {
+      console.warn('HEIC auto-convert failed, attempting direct decode:', e);
+    }
+  }
+
+  const TARGET_MAX_WIDTH = 540;
+  const TARGET_MAX_HEIGHT = 540;
+  const TARGET_QUALITY = 0.55;
+
+  // Strategy 1: Fast, modern off-thread decode via createImageBitmap
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const canvas = document.createElement('canvas');
+      let width = bitmap.width;
+      let height = bitmap.height;
+
+      if (width > height) {
+        if (width > TARGET_MAX_WIDTH) {
+          height = Math.round((height * TARGET_MAX_WIDTH) / width);
+          width = TARGET_MAX_WIDTH;
+        }
+      } else {
+        if (height > TARGET_MAX_HEIGHT) {
+          width = Math.round((width * TARGET_MAX_HEIGHT) / height);
+          height = TARGET_MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = Math.max(1, width);
+      canvas.height = Math.max(1, height);
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        bitmap.close();
+
+        if (options?.watermarkText) {
+          drawWatermarkOverlay(ctx, canvas.width, canvas.height, options.watermarkText);
+        }
+
+        const dataUrl = canvas.toDataURL('image/jpeg', TARGET_QUALITY);
+        if (dataUrl && dataUrl.startsWith('data:image/')) {
+          return dataUrl;
+        }
+      } else {
+        bitmap.close();
+      }
+    } catch (err) {
+      // Fallback silently without throwing unhandled exceptions
+    }
+  }
+
+  // Strategy 2: URL.createObjectURL + HTMLImageElement
+  try {
+    const objectUrl = URL.createObjectURL(file);
+    const compressedUrl = await new Promise<string>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.naturalWidth || img.width;
+          let height = img.naturalHeight || img.height;
+
+          if (width > height) {
+            if (width > TARGET_MAX_WIDTH) {
+              height = Math.round((height * TARGET_MAX_WIDTH) / width);
+              width = TARGET_MAX_WIDTH;
+            }
+          } else {
+            if (height > TARGET_MAX_HEIGHT) {
+              width = Math.round((width * TARGET_MAX_HEIGHT) / height);
+              height = TARGET_MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = Math.max(1, width);
+          canvas.height = Math.max(1, height);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Canvas context not available'));
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+
+          if (options?.watermarkText) {
+            drawWatermarkOverlay(ctx, canvas.width, canvas.height, options.watermarkText);
+          }
+
+          resolve(canvas.toDataURL('image/jpeg', TARGET_QUALITY));
+        } catch (e) {
+          reject(e);
+        }
+      };
+
+      img.onerror = () => {
+        try { URL.revokeObjectURL(objectUrl); } catch (e) {}
+        reject(new Error('Failed to load image from object URL'));
+      };
+
+      img.src = objectUrl;
+    });
+
+    if (compressedUrl && compressedUrl.startsWith('data:image/')) {
+      return compressedUrl;
+    }
+  } catch (err) {
+    // Strategy 2 failed, proceeding to Strategy 3
+  }
+
+  // Strategy 3: FileReader + Canvas compression
+  try {
+    const rawDataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('FileReader result is not a string'));
+        }
+      };
+      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+
+    const compressedFromDataUrl = await new Promise<string>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let w = img.width;
+          let h = img.height;
+          if (w > h && w > TARGET_MAX_WIDTH) {
+            h = Math.round((h * TARGET_MAX_WIDTH) / w);
+            w = TARGET_MAX_WIDTH;
+          } else if (h > TARGET_MAX_HEIGHT) {
+            w = Math.round((w * TARGET_MAX_HEIGHT) / h);
+            h = TARGET_MAX_HEIGHT;
+          }
+          canvas.width = Math.max(1, w);
+          canvas.height = Math.max(1, h);
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, w, h);
+
+            if (options?.watermarkText) {
+              drawWatermarkOverlay(ctx, canvas.width, canvas.height, options.watermarkText);
+            }
+
+            resolve(canvas.toDataURL('image/jpeg', TARGET_QUALITY));
+            return;
+          }
+        } catch (e) {
+          // ignore
+        }
+        // If canvas drawing failed, only return rawDataUrl if under 60KB
+        resolve(rawDataUrl.length < 60 * 1024 ? rawDataUrl : '');
+      };
+      img.onerror = () => {
+        resolve(rawDataUrl.length < 60 * 1024 ? rawDataUrl : '');
+      };
+      img.src = rawDataUrl;
+    });
+
+    if (compressedFromDataUrl) {
+      return compressedFromDataUrl;
+    }
+  } catch (err) {
+    // Strategy 3 failed, generating fallback
+  }
+
+  // Ultimate fallback: lightweight canvas placeholder (~8KB)
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 500;
+    canvas.height = 375;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, 500, 375);
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(file.name || 'E STORE THRIFT', 250, 180);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('1-OF-1 PRELOVED SHOES • MAJALENGKA', 250, 215);
+      return canvas.toDataURL('image/jpeg', 0.65);
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return 'https://picsum.photos/seed/estehanget/600/450';
 };
 
 export const createStore = async (storeData: Omit<Store, 'id' | 'createdAt' | 'rating'>) => {
@@ -167,8 +620,10 @@ export const getMyStore = (callback: (store: Store | null) => void) => {
 };
 
 export const addProduct = async (productData: Omit<Product, 'id' | 'createdAt'>) => {
+  const sanitizedImages = await sanitizeProductImages(productData.images || []);
   const finalData = {
     ...productData,
+    images: sanitizedImages,
     stock: productData.stock === 0 ? 0 : 1, // Pastikan stok selalu 1 (atau 0 jika SOLD)
   };
   if (isFirebaseEnabled && db) {
@@ -197,6 +652,9 @@ export const updateProduct = async (productId: string, productData: Partial<Prod
   const payload = { ...productData };
   if (payload.stock !== undefined) {
     payload.stock = payload.stock === 0 ? 0 : 1;
+  }
+  if (payload.images && Array.isArray(payload.images)) {
+    payload.images = await sanitizeProductImages(payload.images);
   }
   if (isFirebaseEnabled && db) {
     try {

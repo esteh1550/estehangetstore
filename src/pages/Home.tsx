@@ -57,6 +57,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
   const [selectedShoeModel, setSelectedShoeModel] = React.useState<string>('all');
   const [selectedShoeType, setSelectedShoeType] = React.useState<string>('all');
   const [selectedSize, setSelectedSize] = React.useState<string>('all');
+  const [statusFilter, setStatusFilter] = React.useState<'all' | 'ready' | 'booked' | 'sold'>('all');
 
   React.useEffect(() => {
     const q = searchParams.get('q');
@@ -141,6 +142,30 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const statusCounts = React.useMemo(() => {
+    let ready = 0;
+    let booked = 0;
+    let sold = 0;
+    allProducts.forEach(p => {
+      const isSoldOut = (p.stock !== undefined ? p.stock : 1) <= 0;
+      if (isSoldOut) sold++;
+      else if (p.isBooked) booked++;
+      else ready++;
+    });
+    return { all: allProducts.length, ready, booked, sold };
+  }, [allProducts]);
+
+  const sizeCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    ALL_SHOE_SIZES.forEach(sz => {
+      counts[sz] = allProducts.filter(p => {
+        const isSoldOut = (p.stock !== undefined ? p.stock : 1) <= 0;
+        return !isSoldOut && doesProductMatchSizeFilter(p.sizes, sz);
+      }).length;
+    });
+    return counts;
+  }, [allProducts]);
+
   const filteredProducts = allProducts.filter(p => {
     const searchLower = search.toLowerCase();
     const matchesSearch = p.name.toLowerCase().includes(searchLower) || 
@@ -163,11 +188,21 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
 
     const matchesSize = doesProductMatchSizeFilter(p.sizes, selectedSize);
 
+    const isSoldOut = (p.stock !== undefined ? p.stock : 1) <= 0;
+    const isBooked = Boolean(p.isBooked && !isSoldOut);
+    const isReady = !isSoldOut && !isBooked;
+
+    const matchesStatus = 
+      statusFilter === 'all' ||
+      (statusFilter === 'ready' && isReady) ||
+      (statusFilter === 'booked' && isBooked) ||
+      (statusFilter === 'sold' && isSoldOut);
+
     const pMin = minPrice ? parseInt(minPrice) : 0;
     const pMax = maxPrice ? parseInt(maxPrice) : Infinity;
     const matchesPrice = p.price >= pMin && p.price <= pMax;
     
-    return matchesSearch && matchesCategory && matchesBrand && matchesShoeModel && matchesShoeType && matchesSize && matchesPrice;
+    return matchesSearch && matchesCategory && matchesBrand && matchesShoeModel && matchesShoeType && matchesSize && matchesPrice && matchesStatus;
   }).sort((a, b) => {
     // Sold out items always go to the bottom
     const aSold = (a.stock || 0) <= 0;
@@ -211,7 +246,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
               <Filter size={18} className="text-black/60" />
               <h3 className="text-sm font-bold uppercase tracking-wider text-black">Filter & Katalog Sepatu</h3>
             </div>
-            {(selectedSize !== 'all' || selectedBrand !== 'all' || selectedShoeModel !== 'all' || selectedShoeType !== 'all' || search !== '') && (
+            {(selectedSize !== 'all' || selectedBrand !== 'all' || selectedShoeModel !== 'all' || selectedShoeType !== 'all' || search !== '' || statusFilter !== 'all') && (
               <button 
                 onClick={() => {
                   setCategory('all');
@@ -219,6 +254,7 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                   setSelectedShoeModel('all');
                   setSelectedShoeType('all');
                   setSelectedSize('all');
+                  setStatusFilter('all');
                   setSearch('');
                 }}
                 className="text-xs font-extrabold text-red-600 hover:underline flex items-center gap-1"
@@ -226,6 +262,75 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                 Reset Semua Filter
               </button>
             )}
+          </div>
+
+          {/* Status Ketersediaan Tab Bar */}
+          <div className="space-y-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-black/60 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-tea-main" />
+              Status Stok & Arsip Thrift
+            </span>
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              <button
+                onClick={() => setStatusFilter('all')}
+                className={cn(
+                  "px-3.5 py-2 rounded-xl text-xs font-black transition-all border whitespace-nowrap flex items-center gap-2 shadow-2xs",
+                  statusFilter === 'all'
+                    ? "bg-black text-white border-black shadow-sm"
+                    : "bg-white text-black/70 border-black/10 hover:border-black/30 hover:bg-black/5"
+                )}
+              >
+                <span>Semua Koleksi</span>
+                <span className={cn("px-1.5 py-0.5 rounded-md text-[10px]", statusFilter === 'all' ? "bg-white/20 text-white" : "bg-black/5 text-black/60")}>
+                  {statusCounts.all}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setStatusFilter('ready')}
+                className={cn(
+                  "px-3.5 py-2 rounded-xl text-xs font-black transition-all border whitespace-nowrap flex items-center gap-2 shadow-2xs",
+                  statusFilter === 'ready'
+                    ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                    : "bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50"
+                )}
+              >
+                <span>🔥 Ready Stock</span>
+                <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-bold", statusFilter === 'ready' ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800")}>
+                  {statusCounts.ready}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setStatusFilter('booked')}
+                className={cn(
+                  "px-3.5 py-2 rounded-xl text-xs font-black transition-all border whitespace-nowrap flex items-center gap-2 shadow-2xs",
+                  statusFilter === 'booked'
+                    ? "bg-amber-500 text-black border-amber-500 shadow-sm"
+                    : "bg-white text-amber-800 border-amber-200 hover:bg-amber-50"
+                )}
+              >
+                <span>🟡 Booked / Keep</span>
+                <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-bold", statusFilter === 'booked' ? "bg-black/20 text-black" : "bg-amber-100 text-amber-900")}>
+                  {statusCounts.booked}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setStatusFilter('sold')}
+                className={cn(
+                  "px-3.5 py-2 rounded-xl text-xs font-black transition-all border whitespace-nowrap flex items-center gap-2 shadow-2xs",
+                  statusFilter === 'sold'
+                    ? "bg-red-600 text-white border-red-600 shadow-sm"
+                    : "bg-white text-red-800 border-red-200 hover:bg-red-50"
+                )}
+              >
+                <span>📦 Terjual (Archive)</span>
+                <span className={cn("px-1.5 py-0.5 rounded-md text-[10px] font-bold", statusFilter === 'sold' ? "bg-white/20 text-white" : "bg-red-100 text-red-800")}>
+                  {statusCounts.sold}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Filter Ukuran Sepatu (Size) */}
@@ -265,13 +370,19 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                     document.getElementById('produk-list')?.scrollIntoView({ behavior: 'smooth' });
                   }}
                   className={cn(
-                    "px-3 py-1.5 rounded-xl text-xs font-black transition-all border flex items-center gap-1",
+                    "px-3 py-1.5 rounded-xl text-xs font-black transition-all border flex items-center gap-1.5",
                     selectedSize === sz
                       ? "bg-black text-white border-black shadow-md scale-105"
                       : "bg-white text-black/80 border-black/10 hover:border-black/30 hover:bg-black/5"
                   )}
                 >
                   <span>{sz}</span>
+                  <span className={cn(
+                    "text-[10px] px-1 py-0.2 rounded font-semibold",
+                    selectedSize === sz ? "bg-white/20 text-white" : "bg-black/5 text-black/50"
+                  )}>
+                    {sizeCounts[sz] || 0}
+                  </span>
                   {selectedSize === sz && <Check size={12} />}
                 </button>
               ))}

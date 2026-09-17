@@ -55,7 +55,7 @@ interface InvoiceMakerProps {
 export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allProducts = [] }: InvoiceMakerProps) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'create' | 'preview' | 'history'>('create');
-  const [previewFormat, setPreviewFormat] = useState<'a4' | 'thermal'>('a4');
+  const [previewFormat, setPreviewFormat] = useState<'a4' | 'thermal' | 'shipping_label'>('a4');
   const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState('');
   const [savedInvoices, setSavedInvoices] = useState<InvoiceData[]>([]);
@@ -984,6 +984,15 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                 >
                   🧾 Struk Kasir (80mm)
                 </button>
+                <button
+                  onClick={() => setPreviewFormat('shipping_label')}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                    previewFormat === 'shipping_label' ? "bg-white text-black shadow-xs" : "text-black/50 hover:text-black"
+                  )}
+                >
+                  🏷️ Label Paket (100x150mm)
+                </button>
               </div>
             </div>
 
@@ -1243,7 +1252,7 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : previewFormat === 'thermal' ? (
               /* Thermal Mini Receipt Format (58mm/80mm POS style) */
               <div 
                 id="invoice-print-area" 
@@ -1308,6 +1317,89 @@ export default function InvoiceMaker({ initialOrder, onClearInitialOrder, allPro
                   <p>*** TERIMA KASIH TELAH BERBELANJA ***</p>
                   <p>Barang 100% Original & Bergaransi</p>
                   <p className="text-[8px] font-sans">Simpan struk ini sebagai bukti pembelian sah.</p>
+                </div>
+              </div>
+            ) : (
+              /* Thermal Shipping Label (100x150mm / Sticker Paket Siap Tempel) */
+              <div 
+                id="invoice-print-area" 
+                className="w-full max-w-md bg-white p-6 rounded-2xl border-2 border-black shadow-2xl text-black font-sans space-y-4"
+              >
+                {/* Header Kurir & Toko */}
+                <div className="flex items-center justify-between border-b-2 border-black pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center font-serif font-black text-xs">
+                      ESTORE
+                    </div>
+                    <div>
+                      <h3 className="font-black text-sm uppercase tracking-tight">E STORE THRIFT</h3>
+                      <p className="text-[10px] text-black/70 font-bold">MAJALENGKA • JAWA BARAT</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="bg-black text-white text-xs font-black px-3 py-1 rounded-md uppercase tracking-wider">
+                      {invoice.courier || 'J&T EXPRESS'}
+                    </span>
+                    <p className="text-[10px] font-bold text-black/70 mt-1 uppercase">
+                      {invoice.fulfillmentType === 'pickup' ? 'COD / AMBIL TOKO' : 'REGULER / DROP OFF'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Resi Barcode */}
+                <div className="bg-black/5 border border-black/20 p-3 rounded-xl text-center space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-black/60">Nomor Resi / Invoice Ref</p>
+                  <p className="text-base font-mono font-black tracking-wider text-black">
+                    {invoice.trackingNumber || invoice.invoiceNumber.replace('INV/ESTORE/', 'EST-')}
+                  </p>
+                  <div className="flex justify-center items-center gap-[2px] h-8 pt-1 px-4 overflow-hidden">
+                    {[3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 4, 1, 2, 3, 2, 1, 3, 4, 2, 1, 3, 1, 2, 4, 2, 1, 3, 2, 1, 3].map((w, i) => (
+                      <div key={i} className="bg-black h-full" style={{ width: `${w * 2}px` }} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Penerima Box */}
+                <div className="border-2 border-black p-3.5 rounded-xl space-y-1.5 bg-black/[0.01]">
+                  <div className="flex items-center justify-between">
+                    <span className="bg-black text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">PENERIMA</span>
+                    <span className="text-xs font-black font-mono">{invoice.customerPhone || '08xx-xxxx-xxxx'}</span>
+                  </div>
+                  <h4 className="text-base font-black text-black pt-0.5">{invoice.customerName || 'Nama Pembeli'}</h4>
+                  <p className="text-xs text-black/90 font-medium leading-relaxed whitespace-pre-wrap">
+                    {invoice.customerAddress || 'Alamat pengiriman pembeli...'}
+                  </p>
+                </div>
+
+                {/* Pengirim Box */}
+                <div className="border border-black/30 p-2.5 rounded-xl space-y-0.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-black/60">PENGIRIM:</span>
+                    <span className="font-bold text-[11px]">{invoice.storePhone || '0851-7955-0150'}</span>
+                  </div>
+                  <p className="font-bold text-black">{invoice.storeName}</p>
+                  <p className="text-[11px] text-black/70">{invoice.storeAddress}</p>
+                </div>
+
+                {/* Detail Isi Paket */}
+                <div className="border border-black/20 p-2.5 rounded-xl space-y-1 text-xs">
+                  <span className="text-[9px] font-black uppercase text-black/60">DAFTAR ISI PAKET:</span>
+                  <div className="space-y-0.5">
+                    {invoice.items.map((it, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-[11px]">
+                        <span className="font-bold text-black truncate pr-2">• {it.name} (Sz: {it.size || '-'})</span>
+                        <span className="font-bold shrink-0">{it.quantity} pasang</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Warning Unboxing */}
+                <div className="p-2.5 bg-amber-50 border border-amber-300 rounded-xl text-center space-y-0.5">
+                  <p className="text-[10px] font-black text-amber-950 uppercase tracking-wider">⚠️ PERHATIAN KURIR & PEMBELI</p>
+                  <p className="text-[9px] text-amber-900 font-medium leading-tight">
+                    Jangan dibanting. Wajib rekam video unboxing lengkap tanpa jeda untuk klaim garansi keaslian.
+                  </p>
                 </div>
               </div>
             )}

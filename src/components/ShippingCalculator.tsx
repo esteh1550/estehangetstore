@@ -17,6 +17,16 @@ interface ShippingDestination {
 
 const DESTINATIONS: ShippingDestination[] = [
   {
+    name: 'Kabupaten Majalengka (COD & Ambil di Basecamp)',
+    region: 'Lokal Majalengka',
+    couriers: [
+      { courier: 'COD Titik Temu', service: 'Alun-Alun / Bunderan Munjul / Kadipaten / Jatiwangi', cost: 0, etd: 'Hari Ini (Janjian Jam)', badge: 'GRATIS COD' },
+      { courier: 'Ambil di Toko', service: 'Basecamp E STORE Majalengka', cost: 0, etd: 'Bisa Diambil Kapan Saja', badge: 'GRATIS' },
+      { courier: 'J&T Express', service: 'EZ (Kirim Lokal se-Kabupaten)', cost: 7000, etd: '1 Hari Sampai' },
+      { courier: 'JNE', service: 'REG (Lokal)', cost: 7000, etd: '1 Hari Sampai' },
+    ]
+  },
+  {
     name: 'Bandung & Sekitarnya (Jawa Barat)',
     region: 'Jawa Barat',
     couriers: [
