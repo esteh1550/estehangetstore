@@ -783,7 +783,15 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
         <div className="max-w-7xl mx-auto flex justify-center">
           <div className="text-center space-y-4 max-w-sm">
             <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-black/5 overflow-hidden p-1">
-              <img src={CONTACT_INFO.logo} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+              <img 
+                src={CONTACT_INFO.logo} 
+                alt="Logo" 
+                className="w-full h-full object-contain" 
+                referrerPolicy="no-referrer" 
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                }}
+              />
             </div>
             <h3 className="text-xl font-display font-bold text-black">Layanan 24/7</h3>
             <p className="text-sm text-black/70 font-medium">Tim admin kami siap membantu kendala belanja Anda kapan saja.</p>

@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import * as dotenv from "dotenv";
 import { processChat, processExtractProduct, formatError } from "./server/geminiService";
+import { processWebhookDispatch } from "./server/webhookService";
 
 dotenv.config();
 
@@ -88,6 +89,26 @@ async function startServer() {
   // AI Chat endpoint for ESA (Disabled)
   app.post("/api/chat", async (req, res) => {
     res.json({ text: "Fitur AI Chatbot (ESA) telah dinonaktifkan." });
+  });
+
+  // Webhook Dispatch endpoint for Instagram, Facebook Page & Automation tools
+  app.post("/api/webhook/dispatch", async (req, res) => {
+    try {
+      const { webhookUrl, secretToken, payload, metaConfig } = req.body || {};
+      if (!payload) {
+        return res.status(400).json({ error: "Payload data produk wajib disertakan." });
+      }
+      const result = await processWebhookDispatch({
+        webhookUrl,
+        secretToken,
+        payload,
+        metaConfig
+      });
+      res.json(result);
+    } catch (err: any) {
+      console.error("Webhook dispatch error:", err);
+      res.status(500).json({ error: err?.message || "Internal server error during webhook dispatch" });
+    }
   });
 
   // Vite middleware for development

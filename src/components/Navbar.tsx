@@ -117,10 +117,13 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
         {/* Center: Brand Serif Logo & Image */}
         <Link to="/" className="flex items-center gap-2.5 group">
           <img 
-            src="https://cdn.phototourl.com/free/2026-08-13-b62f43fb-a043-44e5-bc93-ad3a57c3c330.png" 
+            src={CONTACT_INFO.logo} 
             alt="E STORE Logo" 
             referrerPolicy="no-referrer"
-            className="w-9 h-9 sm:w-11 sm:h-11 object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = '/logo.png';
+            }}
+            className="w-9 h-9 sm:w-11 sm:h-11 object-contain rounded-xl drop-shadow-sm group-hover:scale-105 transition-transform"
           />
           <div className="flex flex-col items-start">
             <span className="font-serif text-xl sm:text-2xl font-bold tracking-[0.18em] text-[#181512] uppercase group-hover:text-[#B83A0E] transition-colors leading-none">

@@ -1,9 +1,12 @@
 import { Product, Store } from './types';
+import appLogo from './assets/images/app_logo_1786532223806.jpg';
+
+export const DEFAULT_LOGO = appLogo;
 
 export const STORE = {
   id: 'e-store-official',
   name: 'E STORE Official',
-  logo: 'https://cdn.phototourl.com/free/2026-08-13-b62f43fb-a043-44e5-bc93-ad3a57c3c330.png',
+  logo: appLogo,
   rating: 4.9,
   location: 'Majalengka, Jawa Barat, Indonesia',
   description: 'Toko resmi E STORE yang menyediakan berbagai pilihan sepatu sneaker, olahraga, formal, dan sepatu wanita 100% original di Majalengka.',
@@ -17,7 +20,7 @@ export const CONTACT_INFO = {
   whatsapp: '+6285179550150',
   instagram: 'https://www.instagram.com/estehangetaja',
   brandName: 'E STORE',
-  logo: 'https://cdn.phototourl.com/free/2026-08-13-b62f43fb-a043-44e5-bc93-ad3a57c3c330.png',
+  logo: appLogo,
 };
 
 export const ADMIN_EMAILS: string[] = [

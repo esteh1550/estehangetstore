@@ -35,7 +35,8 @@ import {
   Check,
   BarChart3,
   FileSpreadsheet,
-  Download
+  Download,
+  Zap
 } from 'lucide-react';
 import { db, isFirebaseEnabled, auth, googleProvider } from '../lib/firebase';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
@@ -57,6 +58,8 @@ import { cn, formatPrice, getYouTubeVideoId, getYouTubeEmbedUrl, isFreshDrop, is
 import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
 import InvoiceMaker from '../components/InvoiceMaker';
+import WebhookManager from '../components/WebhookManager';
+import { dispatchProductWebhook } from '../lib/webhookService';
 
 import { SHOE_BRANDS, SHOE_MODELS } from '../constants/shoeCategories';
 import { generateShoeDetails } from '../utils/shoeAutoGenerator';
@@ -68,7 +71,7 @@ export default function Seller() {
   const [authLoading, setAuthLoading] = React.useState(isFirebaseEnabled);
   const [isFirebaseAuthed, setIsFirebaseAuthed] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'products' | 'invoices' | 'reports' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = React.useState<'dashboard' | 'products' | 'invoices' | 'reports' | 'webhooks' | 'settings'>('dashboard');
   const [isEditingStore, setIsEditingStore] = React.useState(false);
   const [isAddingProduct, setIsAddingProduct] = React.useState(false);
   const [isImportingLink, setIsImportingLink] = React.useState(false);
@@ -246,7 +249,14 @@ export default function Seller() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center overflow-hidden">
               {store?.logo ? (
-                <img src={store.logo} alt={store.name} className="w-full h-full object-cover" />
+                <img 
+                  src={store.logo.includes('phototourl.com') ? CONTACT_INFO.logo : store.logo} 
+                  alt={store.name} 
+                  className="w-full h-full object-cover" 
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                  }}
+                />
               ) : (
                 <StoreIcon className="text-black/20" size={20} />
               )}
@@ -264,6 +274,7 @@ export default function Seller() {
               <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<Package size={16} />} label="Produk" />
               <TabButton active={activeTab === 'invoices'} onClick={() => setActiveTab('invoices')} icon={<FileText size={16} />} label="Invoice & Nota" />
               <TabButton active={activeTab === 'reports'} onClick={() => setActiveTab('reports')} icon={<BarChart3 size={16} />} label="Laporan" />
+              <TabButton active={activeTab === 'webhooks'} onClick={() => setActiveTab('webhooks')} icon={<Share2 size={16} />} label="Webhook Sosmed" />
               <TabButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings size={16} />} label="Toko" />
             </div>
           )}
@@ -542,6 +553,18 @@ export default function Seller() {
             </motion.div>
           )}
 
+          {activeTab === 'webhooks' && (
+            <motion.div
+              key="webhooks"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <WebhookManager />
+            </motion.div>
+          )}
+
           {activeTab === 'settings' && (
             <motion.div
               key="settings"
@@ -566,7 +589,14 @@ export default function Seller() {
                 ) : (
                   <div className="space-y-6">
                     <div className="flex items-center gap-6">
-                      <img src={store.logo} alt={store.name} className="w-24 h-24 rounded-3xl object-cover shadow-xl" />
+                      <img 
+                        src={(store.logo && !store.logo.includes('phototourl.com')) ? store.logo : CONTACT_INFO.logo} 
+                        alt={store.name} 
+                        className="w-24 h-24 rounded-3xl object-contain shadow-xl bg-white p-2 border border-black/5" 
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                        }}
+                      />
                       <div>
                         <h3 className="text-2xl font-bold text-black">{store.name}</h3>
                         <p className="text-black/60 flex items-center gap-1">
@@ -799,6 +829,21 @@ function ProductItem({
 
           <div className="absolute top-3 right-3 flex gap-1.5 z-10">
             <button 
+              title="Kirim ke Instagram & FB Page via Webhook"
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  const res = await dispatchProductWebhook(product, 'manual_push');
+                  alert(res.message);
+                } catch (err: any) {
+                  alert('Gagal: ' + (err?.message || 'Error'));
+                }
+              }}
+              className="p-2 bg-white/90 text-[#B83A0E] rounded-xl shadow-lg hover:scale-110 transition-all cursor-pointer"
+            >
+              <Zap size={15} />
+            </button>
+            <button 
               title="Download Foto Produk"
               onClick={handleDownload} 
               className="p-2 bg-white/90 text-emerald-600 rounded-xl shadow-lg hover:scale-110 transition-all cursor-pointer"
@@ -957,7 +1002,14 @@ function StoreForm({ store, onComplete }: { store?: Store, onComplete: () => voi
           <div className="relative group">
             <div className="w-24 h-24 rounded-3xl bg-black/5 flex items-center justify-center overflow-hidden border-2 border-dashed border-black/10 group-hover:border-tea-main transition-colors">
               {(logoFile || formData.logo) ? (
-                <img src={logoFile ? URL.createObjectURL(logoFile) : formData.logo} alt="Logo" className="w-full h-full object-cover" />
+                <img 
+                  src={logoFile ? URL.createObjectURL(logoFile) : (formData.logo.includes('phototourl.com') ? CONTACT_INFO.logo : formData.logo)} 
+                  alt="Logo" 
+                  className="w-full h-full object-contain p-2" 
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                  }}
+                />
               ) : (
                 <ImageIcon size={32} className="text-black/20" />
               )}
@@ -1043,6 +1095,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
     initialData?.sizes && initialData.sizes.length > 0 ? initialData.sizes.join(', ') : ''
   );
   const [autoWatermark, setAutoWatermark] = React.useState(true);
+  const [autoPostWebhook, setAutoPostWebhook] = React.useState(true);
   const [formData, setFormData] = React.useState({
     name: initialData?.name || '',
     price: initialData?.price || 0,
@@ -1179,9 +1232,21 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
       let newId = '';
       if (initialData?.id) {
         await updateProduct(initialData.id, productData);
+        newId = initialData.id;
       } else {
         newId = await addProduct(productData as any);
       }
+
+      // Otomatis kirim ke Instagram & Facebook Page via Webhook jika dicentang
+      if (autoPostWebhook) {
+        try {
+          const productForWebhook = { ...productData, id: newId || `prod_${Date.now()}` };
+          dispatchProductWebhook(productForWebhook as any, initialData?.id ? 'product.updated' : 'product.created');
+        } catch (whErr) {
+          console.warn('Webhook auto-post warning:', whErr);
+        }
+      }
+
       onComplete(newId);
     } catch (error: any) {
       console.error("Error saving product:", error);
@@ -1698,6 +1763,30 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
             )}
           </div>
         </div>
+      </div>
+
+      {/* Webhook Auto-Post Option */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 border border-orange-200/80 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#B83A0E]/10 text-[#B83A0E] flex items-center justify-center shrink-0">
+            <Share2 size={20} />
+          </div>
+          <div>
+            <span className="text-xs font-bold text-black flex items-center gap-1.5">
+              Otomatis Posting ke Instagram & FB Page via Webhook
+              <span className="bg-[#B83A0E] text-white text-[9px] px-1.5 py-0.5 rounded font-black">AUTO</span>
+            </span>
+            <p className="text-[11px] text-black/60">
+              Kirim foto, caption harga, ukuran, & link pemesanan langsung saat produk ini disimpan
+            </p>
+          </div>
+        </div>
+        <input 
+          type="checkbox" 
+          checked={autoPostWebhook} 
+          onChange={(e) => setAutoPostWebhook(e.target.checked)} 
+          className="w-5 h-5 accent-[#B83A0E] rounded cursor-pointer shrink-0" 
+        />
       </div>
 
       <button

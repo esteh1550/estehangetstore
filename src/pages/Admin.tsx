@@ -16,9 +16,11 @@ import {
   Loader2, LogOut, ShoppingBag, Mail, CheckCircle, Clock, Trash2, 
   Package, ShieldAlert, Globe, Users, Plus, ShieldCheck, UserCheck, 
   FileText, Printer, Sparkles, ExternalLink, Youtube, Play, Video, 
-  Eye, Search, X, Check, Save
+  Eye, Search, X, Check, Save, Share2
 } from 'lucide-react';
 import InvoiceMaker from '../components/InvoiceMaker';
+import WebhookManager from '../components/WebhookManager';
+import { dispatchProductWebhook } from '../lib/webhookService';
 
 // Admin dashboard component
 export default function Admin() {
@@ -28,7 +30,20 @@ export default function Admin() {
   const [orders, setOrders] = React.useState<OrderRecord[]>([]);
   const [newsletters, setNewsletters] = React.useState<NewsletterRecord[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
-  const [activeTab, setActiveTab] = React.useState<'orders' | 'products' | 'invoices' | 'newsletter' | 'admins'>('orders');
+  const [activeTab, setActiveTab] = React.useState<'orders' | 'products' | 'invoices' | 'newsletter' | 'admins' | 'webhooks'>('orders');
+  const [pushingWebhookId, setPushingWebhookId] = React.useState<string | null>(null);
+
+  const handlePushProductWebhook = async (product: Product) => {
+    setPushingWebhookId(product.id);
+    try {
+      const res = await dispatchProductWebhook(product, 'manual_push');
+      alert(res.message);
+    } catch (e: any) {
+      alert('Gagal mengirim webhook: ' + (e?.message || 'Error'));
+    } finally {
+      setPushingWebhookId(null);
+    }
+  };
   const [adminEmailsList, setAdminEmailsList] = React.useState<string[]>([]);
   const [newAdminEmail, setNewAdminEmail] = React.useState('');
   const [loginEmailInput, setLoginEmailInput] = React.useState('');
@@ -162,7 +177,15 @@ export default function Admin() {
           className="bg-white p-10 rounded-3xl shadow-2xl border border-black/5 text-center space-y-6 max-w-md w-full"
         >
           <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mx-auto shadow-sm border border-black/5 overflow-hidden">
-            <img src={CONTACT_INFO.logo} alt="Logo" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            <img 
+              src={CONTACT_INFO.logo} 
+              alt="Logo" 
+              className="w-full h-full object-contain p-1" 
+              referrerPolicy="no-referrer" 
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = '/logo.png';
+              }}
+            />
           </div>
           <h1 className="text-3xl font-display font-bold text-black">Akses Admin</h1>
           <div className="space-y-4">
@@ -340,11 +363,19 @@ export default function Admin() {
           >
             <Users size={18} /> Akun Admin ({adminEmailsList.length})
           </button>
+          <button 
+            onClick={() => setActiveTab('webhooks')}
+            className={`px-5 sm:px-7 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${activeTab === 'webhooks' ? 'bg-white text-black shadow-md' : 'text-black/40 hover:text-black'}`}
+          >
+            <Share2 size={18} className="text-[#B83A0E]" /> Webhook IG & FB
+          </button>
         </div>
 
         {/* Content */}
         <div className="grid grid-cols-1 gap-6">
-          {activeTab === 'invoices' ? (
+          {activeTab === 'webhooks' ? (
+            <WebhookManager />
+          ) : activeTab === 'invoices' ? (
             <InvoiceMaker 
               initialOrder={selectedOrderForInvoice}
               onClearInitialOrder={() => setSelectedOrderForInvoice(null)}
@@ -716,25 +747,42 @@ export default function Admin() {
                         </div>
 
                         {/* Actions */}
-                        <div className="p-5 pt-0 grid grid-cols-2 gap-2">
+                        <div className="p-5 pt-0 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => handleOpenVideoModal(product)}
+                              className={cn(
+                                "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm",
+                                hasValidVideo 
+                                  ? "bg-red-600 text-white hover:bg-red-700" 
+                                  : "bg-black text-white hover:bg-black/80"
+                              )}
+                            >
+                              <Youtube size={14} />
+                              {hasValidVideo ? "Ubah / Test Video" : "+ Pasang Link"}
+                            </button>
+                            <Link
+                              to={`/product/${product.id}`}
+                              className="py-2.5 px-3 rounded-xl font-bold text-xs text-black bg-black/5 hover:bg-black/10 flex items-center justify-center gap-1.5 transition-all"
+                            >
+                              <ExternalLink size={14} /> Lihat di Web
+                            </Link>
+                          </div>
+
                           <button
-                            onClick={() => handleOpenVideoModal(product)}
-                            className={cn(
-                              "py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm",
-                              hasValidVideo 
-                                ? "bg-red-600 text-white hover:bg-red-700" 
-                                : "bg-black text-white hover:bg-black/80"
+                            type="button"
+                            onClick={() => handlePushProductWebhook(product)}
+                            disabled={pushingWebhookId === product.id}
+                            className="w-full py-2 px-3 rounded-xl font-bold text-xs text-[#B83A0E] bg-orange-50 hover:bg-orange-100 border border-orange-200 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                            title="Kirim notifikasi / posting produk ini ke Instagram dan Facebook Page via Webhook"
+                          >
+                            {pushingWebhookId === product.id ? (
+                              <Loader2 size={13} className="animate-spin text-[#B83A0E]" />
+                            ) : (
+                              <Share2 size={13} />
                             )}
-                          >
-                            <Youtube size={14} />
-                            {hasValidVideo ? "Ubah / Test Video" : "+ Pasang Link"}
+                            {pushingWebhookId === product.id ? 'Mengirim ke IG & FB...' : 'Kirim ke IG & FB via Webhook'}
                           </button>
-                          <Link
-                            to={`/product/${product.id}`}
-                            className="py-2.5 px-3 rounded-xl font-bold text-xs text-black bg-black/5 hover:bg-black/10 flex items-center justify-center gap-1.5 transition-all"
-                          >
-                            <ExternalLink size={14} /> Lihat di Web
-                          </Link>
                         </div>
                       </div>
                     );

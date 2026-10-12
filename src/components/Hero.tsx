@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { cn } from '../lib/utils';
 
 import { Product } from '../types';
+import { CONTACT_INFO } from '../constants';
 
 interface HeroProps {
   featuredProducts?: Product[];
@@ -43,10 +44,13 @@ export default function Hero({ featuredProducts = [] }: HeroProps) {
           <div className="space-y-6 z-10">
             <div className="flex items-center gap-3">
               <img 
-                src="https://cdn.phototourl.com/free/2026-08-13-b62f43fb-a043-44e5-bc93-ad3a57c3c330.png" 
+                src={CONTACT_INFO.logo} 
                 alt="E STORE Logo" 
                 referrerPolicy="no-referrer"
-                className="w-10 h-10 object-contain drop-shadow-sm"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                }}
+                className="w-10 h-10 object-contain rounded-xl drop-shadow-sm"
               />
               <span className="text-[11px] font-bold tracking-[0.25em] text-[#8C8375] uppercase block">
                 E STORE HERITAGE SELECTION

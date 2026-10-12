@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { CONTACT_INFO } from '../constants';
 
 interface SplashScreenProps {
   onFinish?: () => void;
   duration?: number; // duration in ms
 }
-
-const LOGO_URL = "https://cdn.phototourl.com/free/2026-08-13-b62f43fb-a043-44e5-bc93-ad3a57c3c330.png";
 
 export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreenProps) {
   const [isVisible, setIsVisible] = useState(true);
@@ -15,9 +14,12 @@ export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreen
   useEffect(() => {
     // Preload logo image
     const img = new Image();
-    img.src = LOGO_URL;
+    img.src = CONTACT_INFO.logo;
     img.onload = () => setImageLoaded(true);
-    img.onerror = () => setImageLoaded(true);
+    img.onerror = () => {
+      img.src = '/logo.png';
+      setImageLoaded(true);
+    };
 
     const timer = setTimeout(() => {
       setIsVisible(false);
@@ -53,8 +55,11 @@ export default function SplashScreen({ onFinish, duration = 2800 }: SplashScreen
               className="relative w-36 h-36 sm:w-44 sm:h-44 mb-6 bg-white rounded-3xl p-5 shadow-[0_16px_50px_rgba(24,21,18,0.12)] border border-[#E8DEC9] flex items-center justify-center overflow-hidden"
             >
               <img
-                src={LOGO_URL}
+                src={CONTACT_INFO.logo}
                 alt="E STORE Logo"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                }}
                 className={`w-full h-full object-contain filter drop-shadow-md transition-opacity duration-300 ${
                   imageLoaded ? 'opacity-100' : 'opacity-90'
                 }`}

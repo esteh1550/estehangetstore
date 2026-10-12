@@ -52,6 +52,9 @@ export default function Footer() {
                   src={CONTACT_INFO.logo} 
                   alt="E STORE Logo" 
                   referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/logo.png';
+                  }}
                   className="w-full h-full object-contain"
                 />
               </div>
