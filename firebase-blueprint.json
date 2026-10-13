@@ -94,6 +94,13 @@
         }
       },
       "description": "Newsletter subscriptions."
+    },
+    "/system_settings/{settingId}": {
+      "schema": {
+        "type": "object",
+        "description": "System configuration documents including webhook integration settings."
+      },
+      "description": "System configuration documents."
     }
   }
 }

@@ -136,5 +136,11 @@ service cloud.firestore {
       allow create: if incoming().email is string && incoming().email.size() > 3;
       allow read: if isAdmin();
     }
+
+    // 7. System Settings (Webhook config, app configurations)
+    match /system_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
