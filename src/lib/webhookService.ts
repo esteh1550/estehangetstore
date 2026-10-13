@@ -199,6 +199,31 @@ export function generateProductCaption(
     .replace(/{hashtags}/g, hashtags);
 }
 
+export const DEFAULT_INSTAGRAM_JPEG = 'https://images.unsplash.com/photo-1552346154-21d32810aba3?fm=jpg&fit=crop&w=1080&h=1080&q=85';
+
+export function ensureInstagramCompatibleJpeg(url: string | undefined): string {
+  if (!url || typeof url !== 'string' || !url.trim().startsWith('http')) {
+    return DEFAULT_INSTAGRAM_JPEG;
+  }
+  let clean = url.trim();
+
+  // If unsplash, force fm=jpg and remove auto=format (which sends image/avif causing 36001 error)
+  if (clean.includes('images.unsplash.com')) {
+    clean = clean.replace(/auto=format/g, 'fm=jpg');
+    if (!clean.includes('fm=jpg')) {
+      clean += (clean.includes('?') ? '&' : '?') + 'fm=jpg&q=85';
+    }
+    return clean;
+  }
+
+  // If png or logo.png, fallback to guaranteed JPEG since Instagram strictly requires JPEG
+  if (clean.toLowerCase().endsWith('.png') || clean.includes('/logo.png')) {
+    return DEFAULT_INSTAGRAM_JPEG;
+  }
+
+  return clean;
+}
+
 export function buildWebhookPayload(
   product: Product,
   event: 'product.created' | 'product.updated' | 'test' | 'manual_push',
@@ -212,7 +237,41 @@ export function buildWebhookPayload(
   if (config.platforms.instagram) targetPlatforms.push('instagram');
   if (config.platforms.facebookPage) targetPlatforms.push('facebook_page');
 
+  // 1. Get the actual primary photo of this specific product (prioritize publicImageUrl if explicitly provided)
+  let realPrimaryImage = (product as any).publicImageUrl || '';
+  if (!realPrimaryImage) {
+    if (Array.isArray(product.images) && product.images.length > 0 && product.images[0]) {
+      realPrimaryImage = product.images[0];
+    } else if ((product as any).imageUrl) {
+      realPrimaryImage = (product as any).imageUrl;
+    }
+  }
+
+  // If the product has no image, fallback to default; if http, ensure JPEG parameters
+  if (!realPrimaryImage) {
+    realPrimaryImage = DEFAULT_INSTAGRAM_JPEG;
+  } else if (realPrimaryImage.startsWith('http')) {
+    realPrimaryImage = ensureInstagramCompatibleJpeg(realPrimaryImage);
+  }
+  // (If realPrimaryImage is a data:image/ base64 string, keep it so the server can convert it to a public JPEG file)
+
+  const primaryImageUrl = realPrimaryImage;
+  const allImages = Array.isArray(product.images) && product.images.length > 0
+    ? product.images.map(img => (typeof img === 'string' && img.startsWith('http') ? ensureInstagramCompatibleJpeg(img) : img))
+    : [primaryImageUrl];
+
   return {
+    // Root-level convenience fields for Make.com / Zapier (1-click mapping)
+    photo_url: primaryImageUrl,
+    photoUrl: primaryImageUrl,
+    image_url: primaryImageUrl,
+    imageUrl: primaryImageUrl,
+    caption: caption,
+    message: caption,
+    product_name: product.name,
+    product_price: formatRupiah(product.price),
+    product_url: productUrl,
+
     event,
     timestamp: new Date().toISOString(),
     source: 'E STORE Official App',
@@ -238,15 +297,15 @@ export function buildWebhookPayload(
       insoleLength: product.insoleLength || '',
       description: product.description || '',
       specifications: product.specifications || [],
-      images: product.images || [],
-      imageUrl: product.images?.[0] || '',
+      images: allImages,
+      imageUrl: primaryImageUrl,
       youtubeUrl: product.youtubeUrl || '',
       url: productUrl
     },
     social: {
       caption,
       targetPlatforms,
-      primaryImageUrl: product.images?.[0] || '',
+      primaryImageUrl,
       hashtags: config.autoHashtags || DEFAULT_HASHTAGS
     }
   };
@@ -291,8 +350,19 @@ export async function dispatchProductWebhook(
       })
     });
 
-    const result = await res.json();
-    const isSuccess = res.ok && result.success;
+    const rawText = await res.text();
+    let result: any = null;
+    try {
+      result = JSON.parse(rawText);
+    } catch {
+      result = {
+        success: false,
+        summary: res.ok ? rawText : (res.status === 413 ? 'Ukuran payload foto terlalu besar.' : `Server merespons status ${res.status}`),
+        error: rawText.slice(0, 200)
+      };
+    }
+
+    const isSuccess = res.ok && Boolean(result?.success);
 
     const log: WebhookLog = {
       id: `wh_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -391,7 +461,7 @@ export async function testWebhook(config: WebhookConfig) {
     stock: 1,
     description: 'Ini adalah payload uji coba (Test Webhook) untuk memastikan integrasi otomatisasi Instagram & Facebook Page bekerja dengan baik.',
     specifications: ['100% Original', 'Box Lengkap (BNIB)', 'Extra Laces'],
-    images: ['https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=1000'],
+    images: [DEFAULT_INSTAGRAM_JPEG],
     storeId: STORE.id
   };
 

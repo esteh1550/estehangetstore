@@ -122,7 +122,7 @@ export default function WebhookManager() {
     sizes: ['42', '42.5', '43'],
     condition: 'baru',
     description: '100% Original Authentic, Brand New in Box (BNIB). Kualitas material premium kulit asli dengan bantalan empuk Air Sole.',
-    images: ['https://images.unsplash.com/photo-1552346154-21d32810aba3?auto=format&fit=crop&q=80&w=1000']
+    images: ['https://images.unsplash.com/photo-1552346154-21d32810aba3?fm=jpg&fit=crop&w=1080&h=1080&q=85']
   };
 
   const sampleCaption = generateProductCaption(previewSampleProduct, config);

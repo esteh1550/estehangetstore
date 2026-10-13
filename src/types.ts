@@ -34,6 +34,7 @@ export interface Product {
   views?: number;
   isRecommended?: boolean;
   youtubeUrl?: string;
+  publicImageUrl?: string;
   ownerUid?: string;
   createdAt?: any;
   updatedAt?: any;

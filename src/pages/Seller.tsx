@@ -1110,6 +1110,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
     bookedBy: initialData?.bookedBy || '',
     youtubeUrl: initialData?.youtubeUrl || '',
     description: initialData?.description || '',
+    publicImageUrl: initialData?.publicImageUrl || '',
     specifications: Array.isArray(initialData?.specifications) 
       ? initialData.specifications.join('\n') 
       : (typeof initialData?.specifications === 'string' ? initialData.specifications : ''),
@@ -1225,7 +1226,8 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         storeId,
         images: finalImages,
         specifications: specs,
-        youtubeUrl: formData.youtubeUrl.trim()
+        youtubeUrl: formData.youtubeUrl.trim(),
+        publicImageUrl: (formData.publicImageUrl || '').trim()
       };
 
       setWatermarkingStatus('Mengompres foto & menyimpan ke database...');
@@ -1369,6 +1371,49 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
                 <span>Beri Watermark Otomatis ("E STORE THRIFT • MAJALENGKA")</span>
               </div>
             </label>
+
+            {/* Direct Public JPEG URL for Instagram & Facebook Webhook */}
+            <div className="space-y-3 p-4 bg-orange-50/70 border border-orange-200/90 rounded-2xl">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-widest text-[#B83A0E] flex items-center gap-1.5">
+                  <Globe size={15} />
+                  Link Foto JPEG Publik Langsung (Untuk Webhook IG & FB)
+                </label>
+                <span className="text-[10px] font-bold text-orange-800 bg-white px-2 py-0.5 rounded-md border border-orange-200">
+                  Direct JPEG
+                </span>
+              </div>
+              <input
+                type="text"
+                placeholder="https://images.unsplash.com/... atau link JPEG publik langsung (Imgur, Cloudinary, dll)"
+                className="w-full bg-white border-2 border-orange-200 focus:border-[#B83A0E] focus:ring-2 focus:ring-orange-100 rounded-xl px-4 py-3 text-xs font-medium text-black placeholder:text-black/30 transition-all"
+                value={formData.publicImageUrl || ''}
+                onChange={e => setFormData({ ...formData, publicImageUrl: e.target.value })}
+              />
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] font-bold text-black/50">Pilih Cepat Sesuai Brand:</span>
+                {[
+                  { name: 'Nike', url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
+                  { name: 'Air Jordan', url: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
+                  { name: 'Adidas', url: 'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
+                  { name: 'Converse', url: 'https://images.unsplash.com/photo-1607522370275-f14206abe5d3?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
+                  { name: 'Vans', url: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
+                  { name: 'New Balance', url: 'https://images.unsplash.com/photo-1539185441755-769473a23570?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
+                ].map(p => (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, publicImageUrl: p.url })}
+                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white text-black/70 border border-orange-200 hover:bg-orange-100 hover:text-black transition-all"
+                  >
+                    + {p.name}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-orange-950/70 leading-relaxed">
+                *Instagram & Facebook API mewajibkan link foto yang dapat diunduh publik langsung dari internet. Jika dikosongkan, sistem otomatis mencocokkan dengan foto JPEG publik terverifikasi sesuai brand produk.
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">

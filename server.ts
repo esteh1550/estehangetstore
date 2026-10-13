@@ -15,7 +15,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // Diagnostic log for environment variables (keys only)
   console.log("Check API Key candidacy:");
@@ -91,6 +92,16 @@ async function startServer() {
     res.json({ text: "Fitur AI Chatbot (ESA) telah dinonaktifkan." });
   });
 
+  // Static uploads directory for public JPEG access (Instagram & FB crawlers)
+  const uploadsDir = path.join(process.cwd(), "public", "uploads");
+  app.use("/uploads", express.static(uploadsDir, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+        res.setHeader('Content-Type', 'image/jpeg');
+      }
+    }
+  }));
+
   // Webhook Dispatch endpoint for Instagram, Facebook Page & Automation tools
   app.post("/api/webhook/dispatch", async (req, res) => {
     try {
@@ -98,17 +109,41 @@ async function startServer() {
       if (!payload) {
         return res.status(400).json({ error: "Payload data produk wajib disertakan." });
       }
+
+      const rawHost = req.get('x-forwarded-host') || req.get('host') || '';
+      const rawProto = req.get('x-forwarded-proto') || req.protocol || 'https';
+      let publicOrigin = `${rawProto}://${rawHost}`;
+      if (!rawHost || rawHost.includes('localhost') || rawHost.includes('127.0.0.1')) {
+        publicOrigin = 'https://ais-dev-psu5hzueipibaar3vwmcf4-294921380831.asia-east1.run.app';
+      }
+
       const result = await processWebhookDispatch({
         webhookUrl,
         secretToken,
         payload,
-        metaConfig
+        metaConfig,
+        publicOrigin
       });
       res.json(result);
     } catch (err: any) {
       console.error("Webhook dispatch error:", err);
       res.status(500).json({ error: err?.message || "Internal server error during webhook dispatch" });
     }
+  });
+
+  // Error handling middleware for body parser and API errors (always return JSON, never HTML)
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err) {
+      console.error("Server API middleware error:", err);
+      const statusCode = err.status || err.statusCode || (err.type === "entity.too.large" ? 413 : 500);
+      return res.status(statusCode).json({
+        success: false,
+        error: err.type === "entity.too.large" 
+          ? "Ukuran request data terlalu besar (maksimal 50MB)." 
+          : (err.message || "Internal server error")
+      });
+    }
+    next();
   });
 
   // Vite middleware for development

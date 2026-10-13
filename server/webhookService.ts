@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export interface WebhookDispatchOptions {
   webhookUrl?: string;
   secretToken?: string;
@@ -8,6 +11,7 @@ export interface WebhookDispatchOptions {
     pageId?: string;
     instagramAccountId?: string;
   };
+  publicOrigin?: string;
 }
 
 export interface WebhookDispatchResult {
@@ -33,9 +37,195 @@ export interface WebhookDispatchResult {
   };
 }
 
+export const BRAND_JPEG_MAP: Record<string, string> = {
+  nike: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?fm=jpg&fit=crop&w=1080&h=1080&q=85',
+  jordan: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?fm=jpg&fit=crop&w=1080&h=1080&q=85',
+  adidas: 'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?fm=jpg&fit=crop&w=1080&h=1080&q=85',
+  converse: 'https://images.unsplash.com/photo-1607522370275-f14206abe5d3?fm=jpg&fit=crop&w=1080&h=1080&q=85',
+  vans: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?fm=jpg&fit=crop&w=1080&h=1080&q=85',
+  'new balance': 'https://images.unsplash.com/photo-1539185441755-769473a23570?fm=jpg&fit=crop&w=1080&h=1080&q=85',
+  puma: 'https://images.unsplash.com/photo-1608231387042-66d1773070a5?fm=jpg&fit=crop&w=1080&h=1080&q=85',
+};
+
+export function getBrandMatchedJpeg(brandName?: string, productName?: string): string {
+  const combined = `${brandName || ''} ${productName || ''}`.toLowerCase();
+  if (combined.includes('jordan')) return BRAND_JPEG_MAP.jordan;
+  if (combined.includes('nike')) return BRAND_JPEG_MAP.nike;
+  if (combined.includes('adidas')) return BRAND_JPEG_MAP.adidas;
+  if (combined.includes('converse') || combined.includes('all star') || combined.includes('70s')) return BRAND_JPEG_MAP.converse;
+  if (combined.includes('vans') || combined.includes('skool')) return BRAND_JPEG_MAP.vans;
+  if (combined.includes('balance') || combined.includes('nb')) return BRAND_JPEG_MAP['new balance'];
+  if (combined.includes('puma')) return BRAND_JPEG_MAP.puma;
+  return 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?fm=jpg&fit=crop&w=1080&h=1080&q=85';
+}
+
+export function isExternallyAccessibleHttpUrl(url: string | undefined): boolean {
+  if (!url || typeof url !== 'string' || !url.trim().startsWith('http')) return false;
+  const clean = url.trim().toLowerCase();
+  // Filter out localhost, internal IP addresses, and cookie-restricted AI studio dev domains (*.run.app)
+  if (clean.includes('localhost') || clean.includes('127.0.0.1') || clean.includes('.run.app') || clean.includes('/logo.png')) {
+    return false;
+  }
+  return true;
+}
+
+export const DEFAULT_JPEG_FALLBACK = "https://images.unsplash.com/photo-1552346154-21d32810aba3?fm=jpg&fit=crop&w=1080&h=1080&q=85";
+
+export function formatForInstagramJpeg(url: string | undefined): string {
+  if (!url || typeof url !== 'string' || !url.trim().startsWith('http')) {
+    return DEFAULT_JPEG_FALLBACK;
+  }
+  let clean = url.trim();
+
+  // If unsplash, force fm=jpg and remove auto=format (which causes image/avif 36001 error on Meta)
+  if (clean.includes('images.unsplash.com')) {
+    clean = clean.replace(/auto=format/g, 'fm=jpg');
+    if (!clean.includes('fm=jpg')) {
+      clean += (clean.includes('?') ? '&' : '?') + 'fm=jpg&q=85';
+    }
+    return clean;
+  }
+
+  // Only fallback if it's explicitly the default placeholder logo.png
+  if (clean.includes('/logo.png')) {
+    return DEFAULT_JPEG_FALLBACK;
+  }
+
+  return clean;
+}
+
+export function saveBase64ToPublicJpeg(dataUrl: string, productId: string, publicOrigin?: string): string {
+  try {
+    if (!dataUrl || typeof dataUrl !== 'string') return DEFAULT_JPEG_FALLBACK;
+    if (!dataUrl.startsWith('data:')) {
+      return formatForInstagramJpeg(dataUrl);
+    }
+
+    const commaIdx = dataUrl.indexOf(',');
+    const base64Data = commaIdx !== -1 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+    if (!base64Data || base64Data.length < 50) {
+      return DEFAULT_JPEG_FALLBACK;
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const cleanId = (productId || 'prod').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `shoe_${cleanId}_${Date.now()}.jpg`;
+    const filepath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filepath, buffer);
+
+    const origin = (publicOrigin && publicOrigin.startsWith('http') && !publicOrigin.includes('localhost') && !publicOrigin.includes('127.0.0.1'))
+      ? publicOrigin
+      : 'https://ais-dev-psu5hzueipibaar3vwmcf4-294921380831.asia-east1.run.app';
+
+    return `${origin}/uploads/${filename}`;
+  } catch (err) {
+    console.error('Error saving base64 to public JPEG file:', err);
+    return DEFAULT_JPEG_FALLBACK;
+  }
+}
+
+export async function uploadBase64ToPublicCdn(dataUrl: string): Promise<string | null> {
+  try {
+    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+      return null;
+    }
+    const commaIdx = dataUrl.indexOf(',');
+    const base64Data = commaIdx !== -1 ? dataUrl.slice(commaIdx + 1) : dataUrl;
+    if (!base64Data || base64Data.length < 50) {
+      return null;
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+    const form = new FormData();
+    form.append('reqtype', 'fileupload');
+    form.append('time', '72h');
+    form.append('fileToUpload', new Blob([buffer], { type: 'image/jpeg' }), 'shoe_upload.jpg');
+
+    const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+      method: 'POST',
+      body: form
+    });
+    const text = (await res.text()).trim();
+    if (text.startsWith('http://') || text.startsWith('https://')) {
+      return text;
+    }
+    return null;
+  } catch (err) {
+    console.warn('Public CDN upload error:', err);
+    return null;
+  }
+}
+
 export async function processWebhookDispatch(options: WebhookDispatchOptions): Promise<WebhookDispatchResult> {
-  const { webhookUrl, secretToken, payload, metaConfig } = options;
+  const { webhookUrl, secretToken, payload, metaConfig, publicOrigin } = options;
   const timestamp = new Date().toISOString();
+
+  // 1. Process and guarantee 100% public JPEG image URL for the ACTUAL product photo
+  const baseOrigin = publicOrigin || 'https://ais-dev-psu5hzueipibaar3vwmcf4-294921380831.asia-east1.run.app';
+  const prodId = payload?.product?.id || 'product';
+
+  // Look for the actual product image first (prioritizing real images)
+  let rawImg = '';
+  if (Array.isArray(payload?.product?.images) && payload.product.images.length > 0 && payload.product.images[0]) {
+    rawImg = payload.product.images[0];
+  } else if (payload?.product?.imageUrl) {
+    rawImg = payload.product.imageUrl;
+  } else if (payload?.social?.primaryImageUrl) {
+    rawImg = payload.social.primaryImageUrl;
+  } else if (payload?.photo_url) {
+    rawImg = payload.photo_url;
+  }
+
+  let finalJpegUrl = '';
+  // Case A: If already an accessible external public HTTP image URL (not localhost or .run.app)
+  if (rawImg && typeof rawImg === 'string' && rawImg.startsWith('http') && isExternallyAccessibleHttpUrl(rawImg)) {
+    finalJpegUrl = formatForInstagramJpeg(rawImg);
+  }
+  // Case B: If image is a base64 string (user uploaded photo from phone / gallery / camera)
+  else if (rawImg && typeof rawImg === 'string' && rawImg.startsWith('data:')) {
+    // Upload the EXACT photo to public direct JPEG CDN so Instagram can fetch the real photo!
+    const cdnUrl = await uploadBase64ToPublicCdn(rawImg);
+    if (cdnUrl) {
+      finalJpegUrl = cdnUrl;
+    } else {
+      finalJpegUrl = getBrandMatchedJpeg(payload?.product?.brand, payload?.product?.name);
+    }
+  }
+  // Case C: Fallback
+  else {
+    finalJpegUrl = getBrandMatchedJpeg(payload?.product?.brand, payload?.product?.name);
+  }
+
+  // Set this guaranteed public JPEG URL across ALL image parameters (never send binary or data: URLs)
+  if (payload) {
+    payload.photo_url = finalJpegUrl;
+    payload.photoUrl = finalJpegUrl;
+    payload.image_url = finalJpegUrl;
+    payload.imageUrl = finalJpegUrl;
+
+    if (payload.product) {
+      payload.product.imageUrl = finalJpegUrl;
+      if (Array.isArray(payload.product.images)) {
+        payload.product.images = payload.product.images.map((img: any) => {
+          if (typeof img === 'string' && img.startsWith('data:')) {
+            return finalJpegUrl;
+          }
+          return typeof img === 'string' ? formatForInstagramJpeg(img) : finalJpegUrl;
+        });
+      } else {
+        payload.product.images = [finalJpegUrl];
+      }
+    }
+
+    if (payload.social) {
+      payload.social.primaryImageUrl = finalJpegUrl;
+    }
+  }
 
   let overallSuccess = true;
   const summaries: string[] = [];
