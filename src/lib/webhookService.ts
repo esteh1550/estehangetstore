@@ -407,8 +407,8 @@ export async function dispatchProductWebhook(
   if (config.platforms.facebookPage) platformsActive.push('Facebook Page');
 
   try {
-    // Dispatch via server-side proxy route to avoid CORS issues
-    const res = await fetch('/api/webhook/dispatch', {
+    // Dispatch via server-side proxy route (try both /api/webhook/dispatch and /api/webhook-dispatch)
+    let res = await fetch('/api/webhook/dispatch', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -421,6 +421,62 @@ export async function dispatchProductWebhook(
       })
     });
 
+    // If 404 on Vercel serverless functions, retry with /api/webhook-dispatch
+    if (res.status === 404) {
+      try {
+        res = await fetch('/api/webhook-dispatch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            webhookUrl: config.webhookUrl,
+            secretToken: config.secretToken,
+            payload,
+            metaConfig: config.metaConfig
+          })
+        });
+      } catch (e) {
+        // continue
+      }
+    }
+
+    // If still 404 or server unavailable on Vercel, dispatch directly to webhookUrl from browser!
+    if (res.status === 404 && config.webhookUrl && config.webhookUrl.trim()) {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (config.secretToken) {
+        headers['Authorization'] = `Bearer ${config.secretToken}`;
+      }
+      const directRes = await fetch(config.webhookUrl.trim(), {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      const isDirectOk = directRes.ok;
+      const log: WebhookLog = {
+        id: `wh_${Date.now()}_direct`,
+        timestamp: new Date().toISOString(),
+        productId: product.id,
+        productName: product.name,
+        event,
+        status: isDirectOk ? 'success' : 'failed',
+        statusCode: directRes.status,
+        message: isDirectOk ? 'Webhook berhasil dikirim ke Make.com (Direct)' : `Direct Webhook Gagal (${directRes.status})`,
+        platforms: platformsActive,
+        payload
+      };
+      addWebhookLog(log);
+
+      return {
+        success: isDirectOk,
+        message: isDirectOk ? 'Webhook terkirim ke Instagram & FB Page' : 'Gagal mengirim webhook',
+        data: { statusCode: directRes.status }
+      };
+    }
+
     const rawText = await res.text();
     let result: any = null;
     try {
@@ -429,7 +485,7 @@ export async function dispatchProductWebhook(
       result = {
         success: false,
         summary: res.ok ? rawText : (res.status === 413 ? 'Ukuran payload foto terlalu besar.' : `Server merespons status ${res.status}`),
-        error: rawText.slice(0, 200)
+        error: rawText.slice(200)
       };
     }
 
@@ -452,7 +508,7 @@ export async function dispatchProductWebhook(
 
     return {
       success: isSuccess,
-      message: result.summary || (isSuccess ? 'Webhook terkirim ke Instagram & FB Page' : 'Gagal mengirim webhook'),
+      message: result.summary || (isSuccess ? 'Webhook terkirim ke Instagram & FB Page' : (result.error || 'Gagal mengirim webhook')),
       data: result
     };
   } catch (err: any) {

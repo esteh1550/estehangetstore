@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/webhook/dispatch",
+      "destination": "/api/webhook/dispatch"
+    },
+    {
+      "source": "/api/webhook-dispatch",
+      "destination": "/api/webhook/dispatch"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

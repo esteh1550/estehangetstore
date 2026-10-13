@@ -103,7 +103,7 @@ async function startServer() {
   }));
 
   // Webhook Dispatch endpoint for Instagram, Facebook Page & Automation tools
-  app.post("/api/webhook/dispatch", async (req, res) => {
+  app.post(["/api/webhook/dispatch", "/api/webhook-dispatch"], async (req, res) => {
     try {
       const { webhookUrl, secretToken, payload, metaConfig } = req.body || {};
       if (!payload) {
