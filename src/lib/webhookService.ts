@@ -487,40 +487,44 @@ export async function dispatchProductWebhook(
       }
     }
 
-    // If still 404 or server unavailable on Vercel, dispatch directly to webhookUrl from browser!
-    if (res.status === 404 && config.webhookUrl && config.webhookUrl.trim()) {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-      if (config.secretToken) {
-        headers['Authorization'] = `Bearer ${config.secretToken}`;
+    // If server responded with error (404, 500, etc.) on Vercel, automatically dispatch directly to webhookUrl from browser!
+    if (!res.ok && config.webhookUrl && config.webhookUrl.trim()) {
+      try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json'
+        };
+        if (config.secretToken) {
+          headers['Authorization'] = `Bearer ${config.secretToken}`;
+        }
+        const directRes = await fetch(config.webhookUrl.trim(), {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+
+        const isDirectOk = directRes.ok;
+        const log: WebhookLog = {
+          id: `wh_${Date.now()}_direct`,
+          timestamp: new Date().toISOString(),
+          productId: product.id,
+          productName: product.name,
+          event,
+          status: isDirectOk ? 'success' : 'failed',
+          statusCode: directRes.status,
+          message: isDirectOk ? 'Webhook berhasil dikirim ke Make.com (Direct)' : `Direct Webhook Gagal (${directRes.status})`,
+          platforms: platformsActive,
+          payload
+        };
+        addWebhookLog(log);
+
+        return {
+          success: isDirectOk,
+          message: isDirectOk ? 'Webhook terkirim ke Instagram & FB Page' : `Gagal mengirim webhook (Status ${directRes.status})`,
+          data: { statusCode: directRes.status }
+        };
+      } catch (directErr) {
+        console.warn('Direct client fallback failed:', directErr);
       }
-      const directRes = await fetch(config.webhookUrl.trim(), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload)
-      });
-
-      const isDirectOk = directRes.ok;
-      const log: WebhookLog = {
-        id: `wh_${Date.now()}_direct`,
-        timestamp: new Date().toISOString(),
-        productId: product.id,
-        productName: product.name,
-        event,
-        status: isDirectOk ? 'success' : 'failed',
-        statusCode: directRes.status,
-        message: isDirectOk ? 'Webhook berhasil dikirim ke Make.com (Direct)' : `Direct Webhook Gagal (${directRes.status})`,
-        platforms: platformsActive,
-        payload
-      };
-      addWebhookLog(log);
-
-      return {
-        success: isDirectOk,
-        message: isDirectOk ? 'Webhook terkirim ke Instagram & FB Page' : 'Gagal mengirim webhook',
-        data: { statusCode: directRes.status }
-      };
     }
 
     const rawText = await res.text();
