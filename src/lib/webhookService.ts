@@ -135,6 +135,28 @@ export async function saveWebhookConfig(config: WebhookConfig): Promise<void> {
   }
 }
 
+function sanitizeLogPayload(payload: any): any {
+  if (!payload || typeof payload !== 'object') return payload;
+  try {
+    const clone = { ...payload };
+    if ('rawBase64Image' in clone) {
+      delete clone.rawBase64Image;
+    }
+    if (clone.product && typeof clone.product === 'object') {
+      const prod = { ...clone.product };
+      if (Array.isArray(prod.images)) {
+        prod.images = prod.images.map((img: any) =>
+          typeof img === 'string' && img.startsWith('data:') ? '[Base64 Image Omitted]' : img
+        );
+      }
+      clone.product = prod;
+    }
+    return clone;
+  } catch {
+    return { summary: 'Payload sanitized for storage' };
+  }
+}
+
 export function getWebhookLogs(): WebhookLog[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_LOGS);
@@ -147,16 +169,40 @@ export function getWebhookLogs(): WebhookLog[] {
 
 export function addWebhookLog(log: WebhookLog): void {
   try {
+    const cleanLog: WebhookLog = {
+      ...log,
+      payload: sanitizeLogPayload(log.payload)
+    };
+
     const logs = getWebhookLogs();
-    const updated = [log, ...logs].slice(0, 50);
-    localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(updated));
+    let updated = [cleanLog, ...logs].slice(0, 15);
+
+    try {
+      localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(updated));
+    } catch (quotaErr) {
+      console.warn('LocalStorage quota reached, pruning webhook logs:', quotaErr);
+      try {
+        updated = [cleanLog, ...logs].slice(0, 3);
+        localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(updated));
+      } catch {
+        try {
+          localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify([cleanLog]));
+        } catch {
+          localStorage.removeItem(STORAGE_KEY_LOGS);
+        }
+      }
+    }
   } catch (e) {
-    console.error('Error saving webhook log:', e);
+    console.warn('Safe warning: Error saving webhook log suppressed to prevent blocking UI:', e);
   }
 }
 
 export function clearWebhookLogs(): void {
-  localStorage.removeItem(STORAGE_KEY_LOGS);
+  try {
+    localStorage.removeItem(STORAGE_KEY_LOGS);
+  } catch (e) {
+    console.error('Error clearing webhook logs:', e);
+  }
 }
 
 export function formatRupiah(amount: number): string {
