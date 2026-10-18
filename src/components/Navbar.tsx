@@ -19,8 +19,25 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
   const [user, setUser] = React.useState<any>(null);
   const navigate = useNavigate();
 
+  const handleSearchChange = (val: string) => {
+    setSearchVal(val);
+    const cleaned = val.trim().toLowerCase();
+    if (cleaned === 'seller' || cleaned === '/seller') {
+      setSearchVal('');
+      setIsMenuOpen(false);
+      navigate('/seller');
+    }
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const query = searchVal.trim().toLowerCase();
+    if (query === 'seller' || query === '/seller') {
+      setSearchVal('');
+      setIsMenuOpen(false);
+      navigate('/seller');
+      return;
+    }
     if (searchVal.trim()) {
       navigate(`/?q=${encodeURIComponent(searchVal.trim())}`);
     } else {
@@ -106,7 +123,7 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
               placeholder="Cari sepatu..."
               className="w-full bg-[#FAF6F0] border border-[#E0D6C3] rounded-full pl-3 pr-8 py-1.5 text-xs text-[#181512] placeholder-[#8C8375] focus:outline-none focus:border-[#B83A0E]"
               value={searchVal}
-              onChange={(e) => setSearchVal(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
             />
             <button type="submit" className="absolute right-2 text-[#181512] hover:text-[#B83A0E]">
               <Search size={14} />
@@ -201,7 +218,7 @@ export default function Navbar({ cartCount, wishlistCount, onOpenCart, onOpenWis
                 placeholder="Cari sepatu (Nike, Vans, Converse)..."
                 className="w-full bg-[#FAF6F0] border border-[#E0D6C3] rounded-full pl-4 pr-10 py-2 text-sm text-[#181512]"
                 value={searchVal}
-                onChange={(e) => setSearchVal(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
               <button type="submit" className="absolute right-3 top-2.5 text-[#181512]">
                 <Search size={18} />

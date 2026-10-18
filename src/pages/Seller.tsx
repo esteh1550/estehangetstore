@@ -59,7 +59,7 @@ import { useNavigate } from 'react-router-dom';
 import { ADMIN_EMAIL, CONTACT_INFO, isAdminEmail } from '../constants';
 import InvoiceMaker from '../components/InvoiceMaker';
 import WebhookManager from '../components/WebhookManager';
-import { dispatchProductWebhook } from '../lib/webhookService';
+import { dispatchProductWebhook, uploadBase64ToPublicCdn } from '../lib/webhookService';
 
 import { SHOE_BRANDS, SHOE_MODELS } from '../constants/shoeCategories';
 import { generateShoeDetails } from '../utils/shoeAutoGenerator';
@@ -1217,6 +1217,25 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
       const parsedSizes = sizeInput.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
       const finalSizes = parsedSizes.length > 0 ? parsedSizes : (formData.sizes.length > 0 ? formData.sizes : ['42']);
 
+      // Otomatis siapkan link JPEG publik dari foto asli produk yang diupload
+      let directPublicUrl = (formData.publicImageUrl || '').trim();
+      if (!directPublicUrl && finalImages.length > 0 && typeof finalImages[0] === 'string') {
+        if (finalImages[0].startsWith('http') && !finalImages[0].includes('unsplash.com')) {
+          directPublicUrl = finalImages[0];
+        } else if (finalImages[0].startsWith('data:')) {
+          setWatermarkingStatus('Menyiapkan foto produk asli untuk webhook Instagram & FB...');
+          try {
+            const uploadedCdn = await uploadBase64ToPublicCdn(finalImages[0]);
+            if (uploadedCdn) {
+              directPublicUrl = uploadedCdn;
+              console.log('[SellerForm] Foto produk berhasil diunggah ke CDN publik:', uploadedCdn);
+            }
+          } catch (e) {
+            console.warn('[SellerForm] Gagal upload foto produk ke CDN publik:', e);
+          }
+        }
+      }
+
       const productData = {
         ...formData,
         sizes: finalSizes,
@@ -1227,7 +1246,7 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
         images: finalImages,
         specifications: specs,
         youtubeUrl: formData.youtubeUrl.trim(),
-        publicImageUrl: (formData.publicImageUrl || '').trim()
+        publicImageUrl: directPublicUrl
       };
 
       setWatermarkingStatus('Mengompres foto & menyimpan ke database...');
@@ -1372,47 +1391,48 @@ function ProductForm({ storeId, initialData, onComplete }: { storeId: string, in
               </div>
             </label>
 
-            {/* Direct Public JPEG URL for Instagram & Facebook Webhook */}
+            {/* Direct Public JPEG for Instagram & Facebook Webhook */}
             <div className="space-y-3 p-4 bg-orange-50/70 border border-orange-200/90 rounded-2xl">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold uppercase tracking-widest text-[#B83A0E] flex items-center gap-1.5">
                   <Globe size={15} />
-                  Link Foto JPEG Publik Langsung (Untuk Webhook IG & FB)
+                  Foto untuk Webhook Instagram & Facebook
                 </label>
-                <span className="text-[10px] font-bold text-orange-800 bg-white px-2 py-0.5 rounded-md border border-orange-200">
-                  Direct JPEG
+                <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <CheckCircle size={11} className="text-emerald-600" />
+                  Otomatis Foto Asli
                 </span>
               </div>
-              <input
-                type="text"
-                placeholder="https://images.unsplash.com/... atau link JPEG publik langsung (Imgur, Cloudinary, dll)"
-                className="w-full bg-white border-2 border-orange-200 focus:border-[#B83A0E] focus:ring-2 focus:ring-orange-100 rounded-xl px-4 py-3 text-xs font-medium text-black placeholder:text-black/30 transition-all"
-                value={formData.publicImageUrl || ''}
-                onChange={e => setFormData({ ...formData, publicImageUrl: e.target.value })}
-              />
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[10px] font-bold text-black/50">Pilih Cepat Sesuai Brand:</span>
-                {[
-                  { name: 'Nike', url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
-                  { name: 'Air Jordan', url: 'https://images.unsplash.com/photo-1552346154-21d32810aba3?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
-                  { name: 'Adidas', url: 'https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
-                  { name: 'Converse', url: 'https://images.unsplash.com/photo-1607522370275-f14206abe5d3?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
-                  { name: 'Vans', url: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
-                  { name: 'New Balance', url: 'https://images.unsplash.com/photo-1539185441755-769473a23570?fm=jpg&fit=crop&w=1080&h=1080&q=85' },
-                ].map(p => (
-                  <button
-                    key={p.name}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, publicImageUrl: p.url })}
-                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white text-black/70 border border-orange-200 hover:bg-orange-100 hover:text-black transition-all"
-                  >
-                    + {p.name}
-                  </button>
-                ))}
+
+              <div className="p-3 bg-white/90 rounded-xl border border-orange-200/80 text-xs text-orange-950 space-y-1.5 shadow-2xs">
+                <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                  <CheckCircle size={15} className="text-emerald-600 shrink-0" />
+                  <span>Foto produk asli yang Anda upload di atas otomatis dipakai!</span>
+                </div>
+                <p className="text-[11px] text-black/70 leading-relaxed">
+                  Sistem otomatis mengunggah foto asli sepatu Anda ke server CDN publik berformat direct JPEG agar Instagram & Facebook Graph API dapat langsung menerbitkan postingan foto produk asli Anda tanpa error format.
+                </p>
+                {(imageFiles.length > 0 || formData.images.length > 0) && (
+                  <div className="flex items-center gap-2 pt-1 border-t border-black/5 text-[11px] font-bold text-tea-main">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>{imageFiles.length > 0 ? `${imageFiles.length} foto baru dipilih & siap dikirim ke IG/FB` : `${formData.images.length} foto produk tersimpan siap dipakai`}</span>
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] text-orange-950/70 leading-relaxed">
-                *Instagram & Facebook API mewajibkan link foto yang dapat diunduh publik langsung dari internet. Jika dikosongkan, sistem otomatis mencocokkan dengan foto JPEG publik terverifikasi sesuai brand produk.
-              </p>
+
+              {/* Optional override only if needed */}
+              <div className="space-y-1 pt-0.5">
+                <label className="text-[10px] font-bold text-black/50 uppercase tracking-wider block">
+                  Link Foto Kustom (Opsional - Kosongkan saja untuk menggunakan foto upload):
+                </label>
+                <input
+                  type="text"
+                  placeholder="Biarkan kosong (otomatis gunakan foto yang Anda upload)"
+                  className="w-full bg-white border-2 border-orange-200 focus:border-[#B83A0E] focus:ring-2 focus:ring-orange-100 rounded-xl px-4 py-2.5 text-xs font-medium text-black placeholder:text-black/40 transition-all"
+                  value={formData.publicImageUrl || ''}
+                  onChange={e => setFormData({ ...formData, publicImageUrl: e.target.value })}
+                />
+              </div>
             </div>
           </div>
 

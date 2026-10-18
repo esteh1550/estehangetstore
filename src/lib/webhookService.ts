@@ -285,30 +285,57 @@ export async function uploadBase64ToPublicCdn(dataUrl: string): Promise<string |
       return null;
     }
 
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    // Try Method 1: Internal server proxy (/api/upload-public-image)
+    try {
+      const res = await fetch('/api/upload-public-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.success && json?.url && typeof json.url === 'string' && json.url.startsWith('http')) {
+          console.log('[Client] Converted actual product photo via server proxy:', json.url);
+          return json.url;
+        }
+      }
+    } catch (e) {
+      // Continue to direct browser upload
     }
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'image/jpeg' });
 
-    const form = new FormData();
-    form.append('reqtype', 'fileupload');
-    form.append('time', '72h');
-    form.append('fileToUpload', blob, 'photo.jpg');
+    // Try Method 2: Direct browser upload to PixelVault CDN
+    try {
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
 
-    const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-      method: 'POST',
-      body: form
-    });
-    const text = (await res.text()).trim();
-    if (text.startsWith('http://') || text.startsWith('https://')) {
-      return text;
+      const form = new FormData();
+      form.append('file', blob, 'product_photo.jpg');
+
+      const res = await fetch('https://api.pixelvault.dev/v1/images', {
+        method: 'POST',
+        body: form
+      });
+
+      if (res.ok) {
+        const json = await res.json() as any;
+        const url = json?.data?.url;
+        if (url && typeof url === 'string' && url.startsWith('http')) {
+          console.log('[Client] Converted actual product photo via PixelVault:', url);
+          return url;
+        }
+      }
+    } catch (e) {
+      console.warn('Browser direct PixelVault upload failed:', e);
     }
+
     return null;
   } catch (err) {
-    console.warn('Browser CDN upload fallback:', err);
+    console.warn('Browser CDN upload fallback failed:', err);
     return null;
   }
 }

@@ -6,7 +6,7 @@ import ProductCard from '../components/ProductCard';
 import { PRODUCTS, CONTACT_INFO, STORE } from '../constants';
 import { Product } from '../types';
 import { cn, formatPrice, doesProductMatchSizeFilter } from '../lib/utils';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { getAllProducts } from '../lib/sellerService';
 import { useProductHistory } from '../lib/useProductHistory';
 import { useToast } from '../components/Toast';
@@ -49,6 +49,7 @@ function FlashSaleTimer() {
 }
 
 export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wishlist, isShop = false }: HomeProps) {
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = React.useState('');
@@ -61,6 +62,13 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
 
   React.useEffect(() => {
     const q = searchParams.get('q');
+    if (q) {
+      const qLower = q.trim().toLowerCase();
+      if (qLower === 'seller' || qLower === '/seller') {
+        navigate('/seller');
+        return;
+      }
+    }
     const cat = searchParams.get('category');
     const brand = searchParams.get('brand');
     const model = searchParams.get('model');
@@ -694,8 +702,26 @@ export default function Home({ onAddToCart, onToggleWishlist, onViewDetails, wis
                   className="bg-white border border-black/5 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 w-full sm:w-64 transition-all text-black"
                   value={search}
                   onChange={(e) => {
-                    setSearch(e.target.value);
+                    const val = e.target.value;
+                    const clean = val.trim().toLowerCase();
+                    if (clean === 'seller' || clean === '/seller') {
+                      setSearch('');
+                      setShowSuggestions(false);
+                      navigate('/seller');
+                      return;
+                    }
+                    setSearch(val);
                     setShowSuggestions(true);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const clean = search.trim().toLowerCase();
+                      if (clean === 'seller' || clean === '/seller') {
+                        setSearch('');
+                        setShowSuggestions(false);
+                        navigate('/seller');
+                      }
+                    }
                   }}
                   onFocus={() => setShowSuggestions(true)}
                 />

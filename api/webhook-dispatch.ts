@@ -39,6 +39,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 2. Direct Vercel Serverless fetch fallback to Make.com
   if (webhookUrl && typeof webhookUrl === 'string' && webhookUrl.trim().startsWith('http')) {
     try {
+      // If payload has base64 image, convert to direct JPEG via PixelVault
+      const rawBase64 = (payload as any)?.rawBase64Image || payload?.product?.images?.find((img: any) => typeof img === 'string' && img.startsWith('data:'));
+      if (rawBase64 && typeof rawBase64 === 'string') {
+        try {
+          const commaIdx = rawBase64.indexOf(',');
+          const base64Data = commaIdx !== -1 ? rawBase64.slice(commaIdx + 1) : rawBase64;
+          const buffer = Buffer.from(base64Data, 'base64');
+          const form = new FormData();
+          form.append('file', new Blob([buffer], { type: 'image/jpeg' }), 'product_photo.jpg');
+
+          const pvRes = await fetch('https://api.pixelvault.dev/v1/images', {
+            method: 'POST',
+            body: form
+          });
+
+          if (pvRes.ok) {
+            const pvJson = await pvRes.json() as any;
+            const realUrl = pvJson?.data?.url;
+            if (realUrl) {
+              payload.photo_url = realUrl;
+              payload.photoUrl = realUrl;
+              payload.image_url = realUrl;
+              payload.imageUrl = realUrl;
+              if (payload.product) {
+                payload.product.imageUrl = realUrl;
+                if (Array.isArray(payload.product.images)) {
+                  payload.product.images = [realUrl, ...(payload.product.images.slice(1))];
+                }
+              }
+              if (payload.social) {
+                payload.social.primaryImageUrl = realUrl;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Vercel PixelVault upload fallback error:', e);
+        }
+      }
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'User-Agent': 'EStore-Vercel-Agent/1.0',

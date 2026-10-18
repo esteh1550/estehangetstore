@@ -1,5 +1,6 @@
 import React from 'react';
-import { Instagram, MessageCircle, Send } from 'lucide-react';
+import { Instagram, MessageCircle, Send, Store } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { saveNewsletter } from '../lib/storage';
 import { CONTACT_INFO } from '../constants';
 import Modal from './Modal';
@@ -92,9 +93,9 @@ export default function Footer() {
           <div>
             <h4 className="font-serif font-bold text-sm tracking-widest uppercase mb-4 text-[#181512]">Informasi</h4>
             <ul className="space-y-1.5 text-xs text-[#5C5549]">
-              <li><a href="/contact" className="hover:text-[#B83A0E] transition-colors">Hubungi Kami</a></li>
-              <li><a href="/orders" className="hover:text-[#B83A0E] transition-colors">Cek Status Pesanan</a></li>
-              <li><a href="/" className="hover:text-[#B83A0E] transition-colors">Garansi Original 100%</a></li>
+              <li><Link to="/contact" className="hover:text-[#B83A0E] transition-colors">Hubungi Kami</Link></li>
+              <li><Link to="/orders" className="hover:text-[#B83A0E] transition-colors">Cek Status Pesanan</Link></li>
+              <li><Link to="/" className="hover:text-[#B83A0E] transition-colors">Garansi Original 100%</Link></li>
             </ul>
           </div>
 

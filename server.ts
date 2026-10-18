@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import * as dotenv from "dotenv";
 import { processChat, processExtractProduct, formatError } from "./server/geminiService";
-import { processWebhookDispatch } from "./server/webhookService";
+import { processWebhookDispatch, uploadBase64ToPublicCdn } from "./server/webhookService";
 
 dotenv.config();
 
@@ -128,6 +128,27 @@ async function startServer() {
     } catch (err: any) {
       console.error("Webhook dispatch error:", err);
       res.status(500).json({ error: err?.message || "Internal server error during webhook dispatch" });
+    }
+  });
+
+  // Direct image-to-public-JPEG converter for uploaded products (used by Seller & Webhook)
+  app.post("/api/upload-public-image", async (req, res) => {
+    try {
+      const { image, base64 } = req.body || {};
+      const imgData = image || base64;
+      if (!imgData || typeof imgData !== 'string') {
+        return res.status(400).json({ success: false, error: "Data foto (base64) wajib disertakan." });
+      }
+
+      const publicUrl = await uploadBase64ToPublicCdn(imgData);
+      if (publicUrl) {
+        return res.json({ success: true, url: publicUrl });
+      }
+
+      return res.status(500).json({ success: false, error: "Gagal memproses upload foto ke CDN publik." });
+    } catch (err: any) {
+      console.error("Public image upload endpoint error:", err);
+      res.status(500).json({ success: false, error: err?.message || "Internal server error" });
     }
   });
 

@@ -141,19 +141,44 @@ export async function uploadBase64ToPublicCdn(dataUrl: string): Promise<string |
     }
 
     const buffer = Buffer.from(base64Data, 'base64');
-    const form = new FormData();
-    form.append('reqtype', 'fileupload');
-    form.append('time', '72h');
-    form.append('fileToUpload', new Blob([buffer], { type: 'image/jpeg' }), 'shoe_upload.jpg');
 
-    const res = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-      method: 'POST',
-      body: form
-    });
-    const text = (await res.text()).trim();
-    if (text.startsWith('http://') || text.startsWith('https://')) {
-      return text;
+    // Method 1: PixelVault - Direct JPEG image CDN (instant, Cloudflare backed, direct JPEG content-type for Meta)
+    try {
+      const form = new FormData();
+      form.append('file', new Blob([buffer], { type: 'image/jpeg' }), 'product_photo.jpg');
+
+      const res = await fetch('https://api.pixelvault.dev/v1/images', {
+        method: 'POST',
+        body: form
+      });
+
+      if (res.ok) {
+        const json = await res.json() as any;
+        const url = json?.data?.url;
+        if (url && typeof url === 'string' && url.startsWith('http')) {
+          console.log('[WebhookService] Uploaded actual product photo to PixelVault CDN:', url);
+          return url;
+        }
+      } else {
+        console.warn('[WebhookService] PixelVault upload responded with status:', res.status);
+      }
+    } catch (pvErr) {
+      console.warn('[WebhookService] PixelVault fetch error:', pvErr);
     }
+
+    // Method 2: Local static disk storage fallback (/uploads/...)
+    try {
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      const filename = `shoe_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.jpg`;
+      fs.writeFileSync(path.join(uploadsDir, filename), buffer);
+      return `/uploads/${filename}`;
+    } catch (fsErr) {
+      console.warn('[WebhookService] Local storage save error:', fsErr);
+    }
+
     return null;
   } catch (err) {
     console.warn('Public CDN upload error:', err);
@@ -167,37 +192,52 @@ export async function processWebhookDispatch(options: WebhookDispatchOptions): P
 
   // 1. Process and guarantee 100% public JPEG image URL for the ACTUAL product photo
   const baseOrigin = publicOrigin || 'https://ais-dev-psu5hzueipibaar3vwmcf4-294921380831.asia-east1.run.app';
-  const prodId = payload?.product?.id || 'product';
 
-  // Look for the actual product image first (prioritizing real images)
-  let rawImg = '';
-  if (Array.isArray(payload?.product?.images) && payload.product.images.length > 0 && payload.product.images[0]) {
-    rawImg = payload.product.images[0];
-  } else if (payload?.product?.imageUrl) {
-    rawImg = payload.product.imageUrl;
-  } else if (payload?.social?.primaryImageUrl) {
-    rawImg = payload.social.primaryImageUrl;
-  } else if (payload?.photo_url) {
-    rawImg = payload.photo_url;
+  // PRIORITY 1: Check if there is a real base64 photo of the user's uploaded product
+  let realBase64 = (payload as any)?.rawBase64Image || '';
+  if (!realBase64 && Array.isArray(payload?.product?.images)) {
+    const dataImg = payload.product.images.find((img: any) => typeof img === 'string' && img.startsWith('data:'));
+    if (dataImg) realBase64 = dataImg;
+  }
+  if (!realBase64 && typeof payload?.product?.imageUrl === 'string' && payload.product.imageUrl.startsWith('data:')) {
+    realBase64 = payload.product.imageUrl;
+  }
+  if (!realBase64 && typeof payload?.photo_url === 'string' && payload.photo_url.startsWith('data:')) {
+    realBase64 = payload.photo_url;
   }
 
   let finalJpegUrl = '';
-  // Case A: If already an accessible external public HTTP image URL (not localhost or .run.app)
-  if (rawImg && typeof rawImg === 'string' && rawImg.startsWith('http') && isExternallyAccessibleHttpUrl(rawImg)) {
-    finalJpegUrl = formatForInstagramJpeg(rawImg);
-  }
-  // Case B: If image is a base64 string (user uploaded photo from phone / gallery / camera)
-  else if (rawImg && typeof rawImg === 'string' && rawImg.startsWith('data:')) {
-    // Upload the EXACT photo to public direct JPEG CDN so Instagram can fetch the real photo!
-    const cdnUrl = await uploadBase64ToPublicCdn(rawImg);
+
+  // If user uploaded an actual photo (base64 from device / gallery):
+  if (realBase64) {
+    const cdnUrl = await uploadBase64ToPublicCdn(realBase64);
     if (cdnUrl) {
-      finalJpegUrl = cdnUrl;
-    } else {
-      finalJpegUrl = getBrandMatchedJpeg(payload?.product?.brand, payload?.product?.name);
+      if (cdnUrl.startsWith('/uploads/')) {
+        finalJpegUrl = `${baseOrigin}${cdnUrl}`;
+      } else {
+        finalJpegUrl = cdnUrl;
+      }
+      console.log('[WebhookService] Using real uploaded product image URL:', finalJpegUrl);
     }
   }
-  // Case C: Fallback
-  else {
+
+  // PRIORITY 2: If no base64, check for an explicit user-provided public URL that is NOT the fallback
+  if (!finalJpegUrl) {
+    const candidateUrls = [
+      payload?.product?.publicImageUrl,
+      ...(Array.isArray(payload?.product?.images) ? payload.product.images : []),
+      payload?.product?.imageUrl,
+      payload?.social?.primaryImageUrl,
+      payload?.photo_url
+    ].filter((u: any) => typeof u === 'string' && u.startsWith('http') && !u.includes('images.unsplash.com/photo-1552346154-21d32810aba3'));
+
+    if (candidateUrls.length > 0 && isExternallyAccessibleHttpUrl(candidateUrls[0])) {
+      finalJpegUrl = formatForInstagramJpeg(candidateUrls[0]);
+    }
+  }
+
+  // PRIORITY 3: Fallback only if no product image was ever uploaded or provided
+  if (!finalJpegUrl) {
     finalJpegUrl = getBrandMatchedJpeg(payload?.product?.brand, payload?.product?.name);
   }
 
